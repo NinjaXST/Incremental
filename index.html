@@ -33,7 +33,7 @@
         #gameCanvas {
             display: block;
             width: 100%;
-            flex: 1;
+            flex: 1 1 0;
             min-height: 0;
             border-bottom: 3px solid #4a2e10;
             image-rendering: pixelated;
@@ -125,11 +125,11 @@
 
         .upg-card {
             border-right: 1px solid #221408;
-            padding: clamp(4px, 1.4vw, 8px) clamp(3px, 1vw, 6px);
+            padding: clamp(6px, 2vw, 12px) clamp(5px, 1.5vw, 9px);
             flex: 1;
             display: flex;
             flex-direction: column;
-            gap: 4px;
+            gap: 5px;
             transition: background 0.1s;
             min-width: 0;
         }
@@ -142,33 +142,32 @@
 
         .upg-name {
             color: #c8a450;
-            font-size: clamp(8px, 2.2vw, 11px);
+            font-size: clamp(10px, 2.8vw, 14px);
             font-weight: 900;
             letter-spacing: 0.5px;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
+            line-height: 1.25;
+            word-break: break-word;
         }
         .upg-effect {
             color: #7a9860;
-            font-size: clamp(8px, 2vw, 10px);
+            font-size: clamp(10px, 2.6vw, 13px);
             font-weight: bold;
             line-height: 1.4;
             flex: 1;
         }
         .upg-next {
             color: #506840;
-            font-size: clamp(7px, 1.8vw, 9px);
+            font-size: clamp(9px, 2.3vw, 11px);
             font-weight: bold;
         }
         .upg-lvl-row {
             display: flex;
             align-items: center;
-            gap: 3px;
+            gap: 4px;
         }
         .upg-lvlbar-bg {
             flex: 1;
-            height: 5px;
+            height: 6px;
             background: #1e1108;
             border: 1px solid #3a1e08;
         }
@@ -179,15 +178,15 @@
         }
         .upg-lvl-text {
             color: #6a5030;
-            font-size: clamp(7px, 1.8vw, 9px);
+            font-size: clamp(9px, 2.3vw, 11px);
             font-weight: bold;
             white-space: nowrap;
         }
         .upg-cost-row {
-            font-size: clamp(8px, 2.2vw, 11px);
+            font-size: clamp(10px, 2.8vw, 14px);
             font-weight: 900;
             letter-spacing: 0.3px;
-            padding: clamp(4px, 1.2vw, 6px) 3px;
+            padding: clamp(5px, 1.5vw, 8px) 3px;
             border: 1px solid #3a1e08;
             text-align: center;
         }
@@ -381,7 +380,7 @@
         </div>
         <div id="upgrade-panel">
             <div id="tab-bar">
-                <button class="tab-btn active" id="tab-wood-btn">WOOD</button>
+                <button class="tab-btn active" id="tab-wood-btn">FOREST</button>
                 <button class="tab-btn" id="tab-farm-btn" style="display:none">FARM</button>
             </div>
             <div id="tab-wood">
@@ -431,7 +430,7 @@ function resizeCanvas() {
     canvas.width  = W;
     canvas.height = H;
 
-    GROUND = Math.round(H * 0.82);
+    GROUND = Math.round(H * 0.72);
 
     STARS = Array.from({ length: 55 }, () => ({
         x:  Math.random() * W,
@@ -553,8 +552,9 @@ const UPGRADES = [
         cost() { return DEEP_ROOTS_COSTS[this.level] ?? 99999; },
         growTimeAt(lvl) {
             if (lvl === 0) return 5000;
-            // Aggressive early reduction, diminishing later; min 600ms
-            return Math.max(600, 5000 - 4400 * (1 - Math.pow(0.68, lvl)));
+            if (lvl >= this.maxLevel) return 2500;
+            // Interpolate so lvl 10 lands exactly at 2500ms
+            return Math.round(5000 - 2500 * (1 - Math.pow(0.72, lvl)));
         },
         effectText() {
             const cur = (this.growTimeAt(this.level) / 1000).toFixed(1);
@@ -605,21 +605,21 @@ const UPGRADES = [
     },
     // 5 – Forester's Lodge (auto-chop)
     {
-        id: 'lodge', name: 'AUTO CHOP', maxLevel: 10, level: 0,
+        id: 'lodge', name: "FORESTER'S LODGE", maxLevel: 10, level: 0,
         currency: 'wood',
         costBase: 10, costMult: 1.7,
         cost() { return Math.ceil(this.costBase * Math.pow(this.costMult, this.level)); },
         clicksPerSec() { return this.level; },
         effectText() {
             const cur = this.clicksPerSec();
-            if (this.level === 0) return `Auto: 0/s\n▸ 1 click/s`;
-            if (this.level >= this.maxLevel) return `Auto: ${cur}/s`;
-            return `Auto: ${cur}/s\n▸ ${cur + 1}/s`;
+            if (this.level === 0) return `Auto-Chop: 0/s\n▸ 1/s`;
+            if (this.level >= this.maxLevel) return `Auto-Chop: ${cur}/s`;
+            return `Auto-Chop: ${cur}/s\n▸ ${cur + 1}/s`;
         },
     },
     // 6 – Selective Breeding (costs Food)
     {
-        id: 'breeding', name: 'BREEDING', maxLevel: 10, level: 0,
+        id: 'breeding', name: 'SELECTIVE BREEDING', maxLevel: 10, level: 0,
         currency: 'food',
         costBase: 3, costMult: 1.7,
         cost() { return Math.ceil(this.costBase * Math.pow(this.costMult, this.level)); },
