@@ -153,9 +153,27 @@
         .affordable:active .upg-cost-row { background: #122010; }
         .broke .upg-cost-row { color: #4a3520; border-color: #2a1508; }
         .maxed .upg-cost-row { color: #3a2810; border-color: #221408; }
+
+        #save-indicator {
+            position: fixed;
+            top: 8px;
+            right: 10px;
+            color: #6DC040;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 11px;
+            font-weight: 900;
+            letter-spacing: 2px;
+            text-shadow: 0 0 8px #3a8020;
+            opacity: 0;
+            transition: opacity 0.3s;
+            pointer-events: none;
+            z-index: 100;
+        }
+        #save-indicator.show { opacity: 1; }
     </style>
 </head>
 <body>
+    <div id="save-indicator">SAVED</div>
     <div id="wrapper">
         <canvas id="gameCanvas"></canvas>
         <div id="hud">Wood: <span id="woodCount">0</span></div>
@@ -774,6 +792,7 @@ function buyUpgrade(idx) {
     for (let i = 0; i < UPGRADES.length; i++) buildCard(i);
     syncPanel();
     document.getElementById('woodCount').textContent = formatWood(game.wood);
+    saveGame();
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -861,6 +880,7 @@ function handleTap(clientX, clientY) {
             tree.grown      = false;
             tree.readyPing  = false;
             tree.shakeTimer = 0;
+            saveGame();
         }
         break;
     }
@@ -884,8 +904,57 @@ canvas.addEventListener('mousemove', (e) => {
 });
 
 // ═══════════════════════════════════════════════════════════════
+//  SAVE / LOAD  (localStorage — persists across browser closes)
+// ═══════════════════════════════════════════════════════════════
+const SAVE_KEY = 'woodland_save_v1';
+let saveIndicatorTimeout = null;
+
+function saveGame() {
+    const data = {
+        wood: game.wood,
+        firstChopDone: game.firstChopDone,
+        upgrades: UPGRADES.map(u => u.level),
+        trees: game.trees.map(t => ({ growth: t.growth, grown: t.grown, clicks: t.clicks })),
+    };
+    localStorage.setItem(SAVE_KEY, JSON.stringify(data));
+
+    // Flash "SAVED" indicator
+    const el = document.getElementById('save-indicator');
+    el.classList.add('show');
+    clearTimeout(saveIndicatorTimeout);
+    saveIndicatorTimeout = setTimeout(() => el.classList.remove('show'), 1200);
+}
+
+function loadGame() {
+    try {
+        const raw = localStorage.getItem(SAVE_KEY);
+        if (!raw) return;
+        const data = JSON.parse(raw);
+        if (typeof data.wood === 'number' && isFinite(data.wood))
+            game.wood = data.wood;
+        if (typeof data.firstChopDone === 'boolean')
+            game.firstChopDone = data.firstChopDone;
+        if (Array.isArray(data.upgrades)) {
+            data.upgrades.forEach((lvl, i) => {
+                if (UPGRADES[i] && typeof lvl === 'number' && lvl >= 0 && lvl <= UPGRADES[i].maxLevel)
+                    UPGRADES[i].level = lvl;
+            });
+        }
+        if (Array.isArray(data.trees) && data.trees.length > 0) {
+            game.trees = data.trees.map(t => ({
+                growth: (typeof t.growth === 'number' && isFinite(t.growth)) ? Math.max(0, Math.min(1, t.growth)) : 0,
+                grown:  t.grown  === true,
+                clicks: (typeof t.clicks === 'number') ? t.clicks : 0,
+                shakeTimer: 0, shakeX: 0, readyPing: t.grown === true,
+            }));
+        }
+    } catch (e) { /* localStorage blocked or save corrupted — start fresh */ }
+}
+
+// ═══════════════════════════════════════════════════════════════
 //  START
 // ═══════════════════════════════════════════════════════════════
+loadGame();
 buildPanel();
 
 const ro = new ResizeObserver(() => resizeCanvas());
