@@ -170,9 +170,158 @@
             z-index: 100;
         }
         #save-indicator.show { opacity: 1; }
+
+        /* ── Title screen ── */
+        #title-screen {
+            position: fixed;
+            inset: 0;
+            background: #0d0a07;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 0;
+            z-index: 200;
+        }
+        #title-screen.hidden { display: none; }
+
+        #title-logo {
+            color: #c8a450;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: clamp(36px, 10vw, 64px);
+            font-weight: 900;
+            letter-spacing: 10px;
+            text-transform: uppercase;
+            text-shadow: 0 0 30px #8B6320, 0 0 60px #5a3a10;
+            margin-bottom: 8px;
+        }
+        #title-tagline {
+            color: #6a5030;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: clamp(10px, 2.8vw, 14px);
+            font-weight: 900;
+            letter-spacing: 5px;
+            text-transform: uppercase;
+            margin-bottom: 52px;
+        }
+        .title-btn {
+            font-family: 'Courier New', Courier, monospace;
+            font-weight: 900;
+            letter-spacing: 4px;
+            text-transform: uppercase;
+            border: none;
+            cursor: pointer;
+            width: clamp(220px, 55vw, 300px);
+            padding: 14px 0;
+            margin-bottom: 14px;
+            font-size: clamp(13px, 3.5vw, 16px);
+            transition: background 0.1s, color 0.1s;
+        }
+        #btn-resume {
+            background: #0d1808;
+            color: #6DC040;
+            border: 2px solid #3a6020;
+        }
+        #btn-resume:hover, #btn-resume:active {
+            background: #122010;
+            color: #8ae050;
+        }
+        #btn-new {
+            background: #100a04;
+            color: #c8a450;
+            border: 2px solid #4a2e10;
+        }
+        #btn-new:hover, #btn-new:active {
+            background: #1a1008;
+            color: #e8c060;
+        }
+        #btn-resume.hidden { display: none; }
+
+        /* ── Confirm overlay ── */
+        #confirm-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.75);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 300;
+        }
+        #confirm-overlay.hidden { display: none; }
+        #confirm-box {
+            background: #0d0a07;
+            border: 2px solid #4a2e10;
+            padding: 28px 24px 20px;
+            max-width: clamp(260px, 80vw, 360px);
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+        }
+        #confirm-title {
+            color: #c8a450;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: clamp(13px, 3.5vw, 16px);
+            font-weight: 900;
+            letter-spacing: 3px;
+            text-transform: uppercase;
+        }
+        #confirm-msg {
+            color: #7a6040;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: clamp(11px, 2.8vw, 13px);
+            font-weight: bold;
+            letter-spacing: 1px;
+            line-height: 1.6;
+            margin-bottom: 6px;
+        }
+        .confirm-btn {
+            font-family: 'Courier New', Courier, monospace;
+            font-weight: 900;
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            border: none;
+            cursor: pointer;
+            width: 100%;
+            padding: 12px 0;
+            font-size: clamp(12px, 3vw, 14px);
+            transition: background 0.1s;
+        }
+        #confirm-yes {
+            background: #1a0808;
+            color: #d04030;
+            border: 2px solid #6a2018;
+            margin-bottom: 8px;
+        }
+        #confirm-yes:hover { background: #220a0a; color: #e85040; }
+        #confirm-no {
+            background: #100a04;
+            color: #c8a450;
+            border: 2px solid #4a2e10;
+        }
+        #confirm-no:hover { background: #1a1008; }
     </style>
 </head>
 <body>
+    <!-- Title screen -->
+    <div id="title-screen">
+        <div id="title-logo">WOODLAND</div>
+        <div id="title-tagline">A woodland idle game</div>
+        <button class="title-btn" id="btn-resume">&#9658; Resume Game</button>
+        <button class="title-btn" id="btn-new">&#9658; New Game</button>
+    </div>
+
+    <!-- Overwrite warning -->
+    <div id="confirm-overlay" class="hidden">
+        <div id="confirm-box">
+            <div id="confirm-title">&#9888; Overwrite Save?</div>
+            <div id="confirm-msg">You have an existing save.<br>Starting a new game will erase it permanently.</div>
+            <button class="confirm-btn" id="confirm-yes">&#9658; Erase &amp; Start New</button>
+            <button class="confirm-btn" id="confirm-no">&#9654; Cancel</button>
+        </div>
+    </div>
+
     <div id="save-indicator">SAVED</div>
     <div id="wrapper">
         <canvas id="gameCanvas"></canvas>
@@ -952,19 +1101,79 @@ function loadGame() {
 }
 
 // ═══════════════════════════════════════════════════════════════
+//  TITLE SCREEN
+// ═══════════════════════════════════════════════════════════════
+function hasSave() {
+    try { return !!localStorage.getItem(SAVE_KEY); } catch(e) { return false; }
+}
+
+function eraseSave() {
+    try { localStorage.removeItem(SAVE_KEY); } catch(e) {}
+}
+
+function resetGameState() {
+    game.wood = 0;
+    game.firstChopDone = false;
+    game.trees = [makeTree()];
+    UPGRADES.forEach(u => u.level = 0);
+}
+
+function startGame() {
+    document.getElementById('title-screen').classList.add('hidden');
+    buildPanel();
+    const ro = new ResizeObserver(() => resizeCanvas());
+    ro.observe(canvas);
+    requestAnimationFrame(() => {
+        resizeCanvas();
+        initClouds();
+        requestAnimationFrame(loop);
+    });
+}
+
+function showTitleScreen() {
+    const titleScreen = document.getElementById('title-screen');
+    const btnResume   = document.getElementById('btn-resume');
+    const btnNew      = document.getElementById('btn-new');
+    const confirmOverlay = document.getElementById('confirm-overlay');
+
+    // Show resume only if a save exists
+    if (hasSave()) {
+        btnResume.classList.remove('hidden');
+    } else {
+        btnResume.classList.add('hidden');
+    }
+
+    btnResume.addEventListener('click', () => {
+        loadGame();
+        startGame();
+    });
+
+    btnNew.addEventListener('click', () => {
+        if (hasSave()) {
+            // Warn before overwriting
+            confirmOverlay.classList.remove('hidden');
+        } else {
+            resetGameState();
+            startGame();
+        }
+    });
+
+    document.getElementById('confirm-yes').addEventListener('click', () => {
+        confirmOverlay.classList.add('hidden');
+        eraseSave();
+        resetGameState();
+        startGame();
+    });
+
+    document.getElementById('confirm-no').addEventListener('click', () => {
+        confirmOverlay.classList.add('hidden');
+    });
+}
+
+// ═══════════════════════════════════════════════════════════════
 //  START
 // ═══════════════════════════════════════════════════════════════
-loadGame();
-buildPanel();
-
-const ro = new ResizeObserver(() => resizeCanvas());
-ro.observe(canvas);
-
-requestAnimationFrame(() => {
-    resizeCanvas();
-    initClouds();
-    requestAnimationFrame(loop);
-});
+showTitleScreen();
 </script>
 </body>
 </html>
