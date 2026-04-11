@@ -379,6 +379,7 @@
                 <button class="tab-btn" id="tab-farm-btn" style="display:none">FARM</button>
             </div>
             <div id="tab-wood">
+                <button id="dev-max-btn" onclick="devMaxAll()" style="display:block;width:100%;padding:4px 0;background:#1a0a0a;color:#ff4040;font-family:'Courier New',monospace;font-size:11px;font-weight:900;letter-spacing:2px;border:1px dashed #ff4040;cursor:pointer;">⚠ DEV: MAX ALL (EXCEPT BREEDING)</button>
                 <div class="cards-row">
                     <div id="upg-0" class="upg-card"></div>
                     <div id="upg-1" class="upg-card"></div>
@@ -394,10 +395,10 @@
             </div>
             <div id="tab-farm">
                 <div class="cards-row">
-                    <div class="upg-card maxed"><div class="upg-name">—</div><div class="upg-cost-row">LOCKED</div></div>
-                    <div class="upg-card maxed"><div class="upg-name">—</div><div class="upg-cost-row">LOCKED</div></div>
-                    <div class="upg-card maxed"><div class="upg-name">—</div><div class="upg-cost-row">LOCKED</div></div>
-                    <div class="upg-card maxed"><div class="upg-name">—</div><div class="upg-cost-row">LOCKED</div></div>
+                    <div id="upg-8" class="upg-card"></div>
+                    <div id="upg-9" class="upg-card"></div>
+                    <div id="upg-10" class="upg-card"></div>
+                    <div id="upg-11" class="upg-card"></div>
                 </div>
                 <div class="cards-row">
                     <div class="upg-card maxed"><div class="upg-name">—</div><div class="upg-cost-row">LOCKED</div></div>
@@ -647,14 +648,70 @@ const UPGRADES = [
             return 'Unlock\nFarm tab';
         },
     },
+    // 8 – Sharp Scythe (farm upgrade)
+    {
+        id: 'scythe', name: 'SHARP SCYTHE', maxLevel: 4, level: 0,
+        currency: 'mixed',
+        get woodCost() { return Math.ceil(200 * Math.pow(2, this.level)); },
+        get foodCost() { return Math.ceil(25  * Math.pow(2, this.level)); },
+        cost() { return this.woodCost; },
+        effectText() {
+            const swipes = getSwipesNeeded();
+            if (this.level >= this.maxLevel) return `Harvest in\n1 swipe`;
+            return `Harvest in\n${swipes} swipe${swipes !== 1 ? 's' : ''}`;
+        },
+    },
+    // 9 – Fertilizer (farm upgrade)
+    {
+        id: 'fertilizer', name: 'FERTILIZER', maxLevel: 15, level: 0,
+        currency: 'mixed',
+        get woodCost() { return Math.ceil(400 * Math.pow(1.618, this.level)); },
+        get foodCost() { return Math.ceil(50  * Math.pow(1.618, this.level)); },
+        cost() { return this.woodCost; },
+        effectText() {
+            const secs = (getWheatGrowTime() / 1000).toFixed(1);
+            if (this.level >= this.maxLevel) return `Grow time\n5.0s`;
+            return `Grow time\n${secs}s`;
+        },
+    },
+    // 10 – Crop Rotation (farm upgrade)
+    {
+        id: 'croprot', name: 'CROP ROTATION', maxLevel: 10, level: 0,
+        currency: 'mixed',
+        get woodCost() { return Math.ceil(2000 * Math.pow(1.8, this.level)); },
+        get foodCost() { return Math.ceil(100  * Math.pow(1.8, this.level)); },
+        cost() { return this.woodCost; },
+        effectText() {
+            const cur = Math.pow(2, this.level);
+            const nxt = Math.pow(2, this.level + 1);
+            if (this.level >= this.maxLevel) return `Food from Fruit\nx${Math.pow(2, this.maxLevel)}`;
+            return `Food from Fruit\nx${cur} → x${nxt}`;
+        },
+    },
+    // 11 – New Plot (farm upgrade)
+    {
+        id: 'newplot', name: 'NEW PLOT', maxLevel: 3, level: 0,
+        currency: 'mixed',
+        get woodCost() { return Math.ceil(1000 * Math.pow(3, this.level)); },
+        get foodCost() { return Math.ceil(150  * Math.pow(3, this.level)); },
+        cost() { return this.woodCost; },
+        effectText() {
+            const plots = 1 + this.level;
+            if (this.level >= this.maxLevel) return `Plots: 4\nMax reached`;
+            return `Plots: ${plots}\n→ ${plots + 1} plots`;
+        },
+    },
 ];
 
-function getGrowTime()       { return UPGRADES[1].growTimeAt(UPGRADES[1].level); }
-function getClicksNeeded()   { return 10 - UPGRADES[0].level; }
-function getWoodMultiplier() { return UPGRADES[2].multiplier(); }
-function getFoodMultiplier() { return UPGRADES[6].multiplier(); }
-function getFruitChance()    { return UPGRADES[4].fruitChance(); }
-function getLodgeCPS()       { return UPGRADES[5].clicksPerSec(); }
+function getGrowTime()          { return UPGRADES[1].growTimeAt(UPGRADES[1].level); }
+function getClicksNeeded()      { return 10 - UPGRADES[0].level; }
+function getWoodMultiplier()    { return UPGRADES[2].multiplier(); }
+function getFoodMultiplier()    { return UPGRADES[6].multiplier(); }
+function getFruitChance()       { return UPGRADES[4].fruitChance(); }
+function getLodgeCPS()          { return UPGRADES[5].clicksPerSec(); }
+function getSwipesNeeded()      { return WHEAT_SWIPES_NEEDED - UPGRADES[8].level; }
+function getWheatGrowTime()     { return WHEAT_GROW_TIME - UPGRADES[9].level * (5000 / 15); }
+function getCropRotMult()       { return Math.pow(2, UPGRADES[10].level); }
 function formatNum(n)        { return Number.isInteger(n) ? n : n.toFixed(2); }
 
 // ═══════════════════════════════════════════════════════════════
@@ -1089,7 +1146,10 @@ function drawUI(ts) {
         }
     }
 
-    // Update HUD
+    updateHUD();
+}
+
+function updateHUD() {
     document.getElementById('woodCount').textContent = formatNum(game.wood);
     if (UPGRADES[4].level > 0 || game.food > 0) {
         document.getElementById('food-hud').classList.remove('hidden');
@@ -1205,6 +1265,9 @@ function buyUpgrade(idx) {
         farmBtn.classList.add('new');
         spawnFloat(W / 2, GROUND * 0.15, '✦ FARM UNLOCKED ✦', '#e8a040');
     }
+    if (u.id === 'newplot') {
+        game.farm.plots.push(makePlot());
+    }
 
     for (let i = 0; i < UPGRADES.length; i++) buildCard(i);
     syncPanel();
@@ -1232,16 +1295,45 @@ function switchTab(tab) {
 // ═══════════════════════════════════════════════════════════════
 const WHEAT_GROW_TIME = 10000; // 10 seconds
 
-const WHEAT_SWIPES_NEEDED = 5;
+const WHEAT_SWIPES_NEEDED = 8;
 const WHEAT_FOOD_YIELD    = 100;
+
+function getPlotLayout() {
+    const nPlots = game.farm.plots.length;
+    const margin = Math.round(W * 0.08);
+    const gap    = Math.round(W * 0.02);
+    const plotW  = Math.round((W - margin * 2 - gap * (nPlots - 1)) / nPlots);
+    return game.farm.plots.map((_, i) => ({
+        x: margin + i * (plotW + gap),
+        w: plotW,
+        cx: margin + i * (plotW + gap) + Math.round(plotW / 2),
+    }));
+}
+
+function getPlotIdxFromClientX(clientX) {
+    const rect = canvas.getBoundingClientRect();
+    const x = (clientX - rect.left) * (W / rect.width);
+    const layout = getPlotLayout();
+    for (let i = 0; i < layout.length; i++) {
+        if (x >= layout[i].x && x <= layout[i].x + layout[i].w) return i;
+    }
+    // fallback: find nearest
+    let best = 0, bestDist = Infinity;
+    for (let i = 0; i < layout.length; i++) {
+        const dist = Math.abs(x - layout[i].cx);
+        if (dist < bestDist) { bestDist = dist; best = i; }
+    }
+    return best;
+}
 
 function harvestWheat(plotIdx) {
     const plot = game.farm.plots[plotIdx];
     if (!plot || !plot.grown) return;
     plot.swipeCount = (plot.swipeCount || 0) + 1;
-    if (plot.swipeCount < WHEAT_SWIPES_NEEDED) return;
+    if (plot.swipeCount < getSwipesNeeded()) return;
     game.food += WHEAT_FOOD_YIELD;
-    spawnFloat(W / 2, Math.round(H * 0.35), `+${WHEAT_FOOD_YIELD} FOOD`, '#E8B020', 52);
+    const cx = getPlotLayout()[plotIdx]?.cx ?? W / 2;
+    spawnFloat(cx, Math.round(H * 0.35), `+${WHEAT_FOOD_YIELD} FOOD`, '#E8B020', 52);
     plot.growth    = 0;
     plot.grown     = false;
     plot.readyPing = false;
@@ -1251,9 +1343,100 @@ function harvestWheat(plotIdx) {
     saveGame();
 }
 
-function drawFarmScene(ts) {
-    const plot = game.farm.plots[0];
+function drawPlot(plot, plotX, plotW, plotTop, maxStalkH, ts) {
+    // Frame
+    ctx.fillStyle = '#2a1808';
+    ctx.fillRect(plotX - 4, plotTop - 4, plotW + 8, maxStalkH + 8);
+    ctx.fillStyle = '#3a2010';
+    ctx.fillRect(plotX, plotTop, plotW, maxStalkH);
 
+    // ── Wheat stalks ──
+    const numStalks = Math.max(1, Math.round(plotW / (P * 2)));
+    const stalkSpacing = plotW / numStalks;
+    const stalkH = Math.round(plot.growth * maxStalkH);
+
+    if (stalkH > 2) {
+        for (let i = 0; i < numStalks; i++) {
+            const sx = Math.round(plotX + stalkSpacing * (i + 0.5));
+            const sy = plotTop + maxStalkH;
+            const sway = Math.round(Math.sin(ts / 1400 + i * 0.9) * 1.5);
+
+            ctx.fillStyle = '#5a9020';
+            ctx.fillRect(sx - 1 + sway, sy - stalkH, 2, stalkH);
+            ctx.fillStyle = '#70b030';
+            ctx.fillRect(sx + sway, sy - stalkH, 1, stalkH);
+
+            if (plot.growth > 0.80) {
+                const headAlpha = Math.min(1, (plot.growth - 0.80) / 0.20);
+                const headH = Math.round(P * 2.5);
+                ctx.globalAlpha = headAlpha;
+                ctx.fillStyle = '#C89020';
+                ctx.fillRect(sx - 3 + sway, sy - stalkH - headH, 6, headH);
+                ctx.fillStyle = '#E8C040';
+                ctx.fillRect(sx - 2 + sway, sy - stalkH - headH - P/2, 4, Math.round(P/2));
+                ctx.fillStyle = '#A07010';
+                for (let s = 0; s < 3; s++) {
+                    ctx.fillRect(sx - 3 + sway + (s % 2 === 0 ? -1 : 3), sy - stalkH - Math.round(headH * (s + 1) / 4), 2, 2);
+                }
+                ctx.globalAlpha = 1;
+            }
+        }
+    }
+
+    // Glow overlay when ready
+    if (plot.grown) {
+        const pulse = 0.12 + 0.08 * Math.sin(ts / 350);
+        ctx.fillStyle = `rgba(232,176,32,${pulse})`;
+        ctx.fillRect(plotX, plotTop, plotW, maxStalkH);
+    }
+
+    // ── Progress / harvest bar ──
+    const cx    = plotX + Math.round(plotW / 2);
+    const barY  = plotTop + maxStalkH + Math.round(H * 0.04);
+    const barH2 = Math.round(Math.max(10, Math.min(16, H * 0.025)));
+    const fSize = Math.round(Math.max(9, Math.min(16, plotW * 0.12)));
+
+    ctx.fillStyle = '#1a0d05';
+    ctx.fillRect(plotX - 2, barY - 2, plotW + 4, barH2 + 4);
+    ctx.fillStyle = '#2a1508';
+    ctx.fillRect(plotX, barY, plotW, barH2);
+
+    if (!plot.grown) {
+        const fillW = Math.round(plot.growth * plotW);
+        if (fillW > 0) {
+            ctx.fillStyle = '#5a9020';
+            ctx.fillRect(plotX, barY, fillW, barH2);
+            if (fillW > 3) {
+                ctx.fillStyle = '#70b030';
+                ctx.fillRect(plotX, barY, fillW - 2, barH2 - 3);
+            }
+        }
+        const secsLeft = ((1 - plot.growth) * getWheatGrowTime() / 1000).toFixed(1);
+        ctx.fillStyle = '#6a5030';
+        ctx.font = `bold ${fSize}px "Courier New"`;
+        ctx.textAlign = 'center';
+        ctx.fillText(`${secsLeft}s`, cx, barY + barH2 + fSize + 2);
+    } else {
+        ctx.fillStyle = '#c89020';
+        ctx.fillRect(plotX, barY, plotW, barH2);
+        if (plotW > 3) {
+            ctx.fillStyle = '#e8b030';
+            ctx.fillRect(plotX, barY, plotW - 2, barH2 - 3);
+        }
+        const pulse = 0.7 + 0.3 * Math.sin(ts / 350);
+        ctx.globalAlpha = pulse;
+        ctx.fillStyle = '#E8C040';
+        ctx.font = `bold ${fSize}px "Courier New"`;
+        ctx.textAlign = 'center';
+        const sc = plot.swipeCount || 0;
+        const needed = getSwipesNeeded();
+        const harvestLabel = sc > 0 ? `${sc}/${needed}` : '\u21d4 SWIPE';
+        ctx.fillText(harvestLabel, cx, barY + barH2 + fSize + 2);
+        ctx.globalAlpha = 1;
+    }
+}
+
+function drawFarmScene(ts) {
     // ── Sky ──
     const skyH = Math.round(H * 0.38);
     const skyGrad = ctx.createLinearGradient(0, 0, 0, skyH);
@@ -1289,115 +1472,19 @@ function drawFarmScene(ts) {
     ctx.fillStyle = soilGrad;
     ctx.fillRect(0, groundY, W, H - groundY);
 
-    // Soil furrow rows
     const furrowH = Math.round(H * 0.055);
     for (let r = 0; r * furrowH + groundY < H; r++) {
         ctx.fillStyle = r % 2 === 0 ? 'rgba(0,0,0,0.08)' : 'rgba(255,255,255,0.03)';
         ctx.fillRect(0, groundY + r * furrowH, W, furrowH);
     }
 
-    // ── Wheat plot frame ──
-    const plotX  = Math.round(W * 0.08);
-    const plotW  = Math.round(W * 0.84);
-    const plotTop = groundY + Math.round(H * 0.02);
+    // ── Draw all plots ──
+    const plotTop   = groundY + Math.round(H * 0.02);
     const maxStalkH = Math.round(H * 0.36);
+    const layout    = getPlotLayout();
 
-    // Frame
-    ctx.fillStyle = '#2a1808';
-    ctx.fillRect(plotX - 4, plotTop - 4, plotW + 8, maxStalkH + 8);
-    ctx.fillStyle = '#3a2010';
-    ctx.fillRect(plotX, plotTop, plotW, maxStalkH);
-
-    // ── Wheat stalks ──
-    const numStalks = Math.round(plotW / (P * 2));
-    const stalkSpacing = plotW / numStalks;
-    const stalkH = Math.round(plot.growth * maxStalkH);
-
-    if (stalkH > 2) {
-        for (let i = 0; i < numStalks; i++) {
-            const sx = Math.round(plotX + stalkSpacing * (i + 0.5));
-            const sy = plotTop + maxStalkH; // base of stalk
-            const sway = Math.round(Math.sin(ts / 1400 + i * 0.9) * 1.5);
-
-            // Stem
-            ctx.fillStyle = '#5a9020';
-            ctx.fillRect(sx - 1 + sway, sy - stalkH, 2, stalkH);
-            // Stem highlight
-            ctx.fillStyle = '#70b030';
-            ctx.fillRect(sx + sway, sy - stalkH, 1, stalkH);
-
-            // Grain head fades in above 80% growth
-            if (plot.growth > 0.80) {
-                const headAlpha = Math.min(1, (plot.growth - 0.80) / 0.20);
-                const headH = Math.round(P * 2.5);
-                ctx.globalAlpha = headAlpha;
-                // Head body
-                ctx.fillStyle = '#C89020';
-                ctx.fillRect(sx - 3 + sway, sy - stalkH - headH, 6, headH);
-                // Bright tip
-                ctx.fillStyle = '#E8C040';
-                ctx.fillRect(sx - 2 + sway, sy - stalkH - headH - P/2, 4, Math.round(P/2));
-                // Seeds along head
-                ctx.fillStyle = '#A07010';
-                for (let s = 0; s < 3; s++) {
-                    ctx.fillRect(sx - 3 + sway + (s % 2 === 0 ? -1 : 3), sy - stalkH - Math.round(headH * (s + 1) / 4), 2, 2);
-                }
-                ctx.globalAlpha = 1;
-            }
-        }
-    }
-
-    // Glow overlay when ready to harvest
-    if (plot.grown) {
-        const pulse = 0.12 + 0.08 * Math.sin(ts / 350);
-        ctx.fillStyle = `rgba(232,176,32,${pulse})`;
-        ctx.fillRect(plotX, plotTop, plotW, maxStalkH);
-    }
-
-    // ── Progress / harvest bar ──
-    const barY = plotTop + maxStalkH + Math.round(H * 0.04);
-    const barH2 = Math.round(Math.max(10, Math.min(16, H * 0.025)));
-    const fSize = Math.round(Math.max(11, Math.min(16, W * 0.032)));
-
-    ctx.fillStyle = '#1a0d05';
-    ctx.fillRect(plotX - 2, barY - 2, plotW + 4, barH2 + 4);
-    ctx.fillStyle = '#2a1508';
-    ctx.fillRect(plotX, barY, plotW, barH2);
-
-    if (!plot.grown) {
-        const fillW = Math.round(plot.growth * plotW);
-        if (fillW > 0) {
-            ctx.fillStyle = '#5a9020';
-            ctx.fillRect(plotX, barY, fillW, barH2);
-            if (fillW > 3) {
-                ctx.fillStyle = '#70b030';
-                ctx.fillRect(plotX, barY, fillW - 2, barH2 - 3);
-            }
-        }
-        const secsLeft = ((1 - plot.growth) * WHEAT_GROW_TIME / 1000).toFixed(1);
-        ctx.fillStyle = '#6a5030';
-        ctx.font = `bold ${fSize}px "Courier New"`;
-        ctx.textAlign = 'center';
-        ctx.fillText(`GROWING  ${secsLeft}s`, W / 2, barY + barH2 + fSize + 2);
-    } else {
-        // Full gold bar
-        ctx.fillStyle = '#c89020';
-        ctx.fillRect(plotX, barY, plotW, barH2);
-        if (plotW > 3) {
-            ctx.fillStyle = '#e8b030';
-            ctx.fillRect(plotX, barY, plotW - 2, barH2 - 3);
-        }
-        const pulse = 0.7 + 0.3 * Math.sin(ts / 350);
-        ctx.globalAlpha = pulse;
-        ctx.fillStyle = '#E8C040';
-        ctx.font = `bold ${fSize}px "Courier New"`;
-        ctx.textAlign = 'center';
-        const sc = plot.swipeCount || 0;
-        const harvestLabel = sc > 0
-            ? `\u2190 SWIPE ${sc}/${WHEAT_SWIPES_NEEDED} \u2192`
-            : '\u2190 SWIPE TO HARVEST \u2192';
-        ctx.fillText(harvestLabel, W / 2, barY + barH2 + fSize + 2);
-        ctx.globalAlpha = 1;
+    for (let i = 0; i < game.farm.plots.length; i++) {
+        drawPlot(game.farm.plots[i], layout[i].x, layout[i].w, plotTop, maxStalkH, ts);
     }
 
     drawFloats();
@@ -1407,6 +1494,7 @@ function drawFarmScene(ts) {
 //  GAME LOOP
 // ═══════════════════════════════════════════════════════════════
 let lastTs = 0;
+let lastHudSync = 0;
 
 function chopTree(tree, cx) {
     const gained = getWoodMultiplier();
@@ -1415,7 +1503,7 @@ function chopTree(tree, cx) {
     if (activeTab !== 'farm') spawnFloat(cx, GROUND - TREE_ART[3].length * P - 20, wLabel, '#c8a450');
 
     if (tree.hasFruit) {
-        const foodGained = getFoodMultiplier();
+        const foodGained = getFoodMultiplier() * getCropRotMult();
         game.food += foodGained;
         const fLabel = foodGained % 1 === 0 ? `+${foodGained} FOOD` : `+${foodGained.toFixed(2)} FOOD`;
         if (activeTab !== 'farm') spawnFloat(cx, GROUND - TREE_ART[3].length * P - 36, fLabel, '#e07020');
@@ -1499,7 +1587,7 @@ function loop(ts) {
     // Grow wheat plots regardless of active tab
     for (const plot of game.farm.plots) {
         if (!plot.grown) {
-            plot.growth = Math.min(1, plot.growth + dt / WHEAT_GROW_TIME);
+            plot.growth = Math.min(1, plot.growth + dt / getWheatGrowTime());
             if (plot.growth >= 1 && !plot.readyPing) {
                 plot.grown     = true;
                 plot.readyPing = true;
@@ -1510,6 +1598,7 @@ function loop(ts) {
     ctx.clearRect(0, 0, W, H);
     if (activeTab === 'farm') {
         drawFarmScene(ts);
+        if (ts - lastHudSync >= 200) { updateHUD(); syncPanel(); lastHudSync = ts; }
     } else {
         drawBackground(ts);
         drawCabin(ts);
@@ -1560,7 +1649,8 @@ canvas.addEventListener('mousedown', (e) => {
 });
 canvas.addEventListener('mouseup', (e) => {
     if (activeTab === 'farm' && swipeStartX !== null) {
-        if (Math.abs(e.clientX - swipeStartX) > W * 0.15) harvestWheat(0);
+        if (Math.abs(e.clientX - swipeStartX) > W * 0.15)
+            harvestWheat(getPlotIdxFromClientX(swipeStartX));
         swipeStartX = null;
     }
 });
@@ -1576,7 +1666,8 @@ canvas.addEventListener('touchstart', (e) => {
 
 canvas.addEventListener('touchend', (e) => {
     if (activeTab === 'farm' && swipeStartX !== null) {
-        if (Math.abs(e.changedTouches[0].clientX - swipeStartX) > W * 0.15) harvestWheat(0);
+        if (Math.abs(e.changedTouches[0].clientX - swipeStartX) > W * 0.15)
+            harvestWheat(getPlotIdxFromClientX(swipeStartX));
         swipeStartX = null;
     }
 });
@@ -1691,16 +1782,45 @@ function resetGameState() {
     document.getElementById('food-hud').classList.add('hidden');
 }
 
+function matchFarmTabHeight() {
+    const woodEl = document.getElementById('tab-wood');
+    const farmEl = document.getElementById('tab-farm');
+    farmEl.style.minHeight = woodEl.offsetHeight + 'px';
+}
+
 function startGame() {
     document.getElementById('title-screen').classList.add('hidden');
     buildPanel();
-    const ro = new ResizeObserver(() => resizeCanvas());
+    const ro = new ResizeObserver(() => {
+        resizeCanvas();
+        requestAnimationFrame(matchFarmTabHeight);
+    });
     ro.observe(canvas);
     requestAnimationFrame(() => {
         resizeCanvas();
         initClouds();
+        matchFarmTabHeight();
         requestAnimationFrame(loop);
     });
+}
+
+function devMaxAll() {
+    UPGRADES.forEach((u, i) => {
+        if (i === 6) return; // skip Selective Breeding
+        if (i >= 8) return;  // skip Farm tab upgrades
+        u.level = u.maxLevel;
+    });
+    // Apply side-effects of unlocked upgrades
+    while (game.trees.length < 1 + UPGRADES[3].maxLevel) game.trees.push(makeTree());
+    const farmBtn = document.getElementById('tab-farm-btn');
+    farmBtn.style.display = '';
+    farmBtn.classList.remove('new');
+
+    for (let i = 0; i < UPGRADES.length; i++) buildCard(i);
+    syncPanel();
+    updateHUD();
+    matchFarmTabHeight();
+    saveGame();
 }
 
 function showTitleScreen() {
