@@ -379,7 +379,7 @@
                 <button class="tab-btn" id="tab-farm-btn" style="display:none">FARM</button>
             </div>
             <div id="tab-wood">
-                <button id="dev-max-btn" onclick="devMaxAll()" style="display:block;width:100%;padding:4px 0;background:#1a0a0a;color:#ff4040;font-family:'Courier New',monospace;font-size:11px;font-weight:900;letter-spacing:2px;border:1px dashed #ff4040;cursor:pointer;">⚠ DEV: MAX ALL (EXCEPT BREEDING)</button>
+                <button id="dev-max-btn" onclick="devMaxAll()" style="display:block;width:100%;padding:4px 0;background:#1a0a0a;color:#ff4040;font-family:'Courier New',monospace;font-size:11px;font-weight:900;letter-spacing:2px;border:1px dashed #ff4040;cursor:pointer;">⚠ DEV: MAX ALL (FOREST)</button>
                 <div class="cards-row">
                     <div id="upg-0" class="upg-card"></div>
                     <div id="upg-1" class="upg-card"></div>
@@ -387,8 +387,8 @@
                     <div id="upg-3" class="upg-card"></div>
                 </div>
                 <div class="cards-row">
-                    <div id="upg-4" class="upg-card"></div>
                     <div id="upg-5" class="upg-card"></div>
+                    <div id="upg-4" class="upg-card"></div>
                     <div id="upg-6" class="upg-card"></div>
                     <div id="upg-7" class="upg-card"></div>
                 </div>
@@ -397,12 +397,12 @@
                 <div class="cards-row">
                     <div id="upg-8" class="upg-card"></div>
                     <div id="upg-9" class="upg-card"></div>
-                    <div id="upg-10" class="upg-card"></div>
+                    <div id="upg-12" class="upg-card"></div>
                     <div id="upg-11" class="upg-card"></div>
                 </div>
                 <div class="cards-row">
-                    <div class="upg-card maxed"><div class="upg-name">—</div><div class="upg-cost-row">LOCKED</div></div>
-                    <div class="upg-card maxed"><div class="upg-name">—</div><div class="upg-cost-row">LOCKED</div></div>
+                    <div id="upg-10" class="upg-card"></div>
+                    <div id="upg-13" class="upg-card"></div>
                     <div class="upg-card maxed"><div class="upg-name">—</div><div class="upg-cost-row">LOCKED</div></div>
                     <div class="upg-card maxed"><div class="upg-name">—</div><div class="upg-cost-row">LOCKED</div></div>
                 </div>
@@ -547,8 +547,8 @@ const UPGRADES = [
         cost() { return this.level + 1; },
         effectText() {
             const cur = 10 - this.level;
-            if (this.level >= this.maxLevel) return `Chops: ${cur}`;
-            return `Chops: ${cur}\n▸ ${cur - 1} (−1)`;
+            if (this.level >= this.maxLevel) return `Chops to harvest: ${cur}`;
+            return `Chops to harvest: ${cur}\n▸ ${cur - 1} (−1)`;
         },
     },
     // 1 – Deep Roots (faster early scaling)
@@ -564,10 +564,10 @@ const UPGRADES = [
         },
         effectText() {
             const cur = (this.growTimeAt(this.level) / 1000).toFixed(1);
-            if (this.level >= this.maxLevel) return `Grow: ${cur}s`;
+            if (this.level >= this.maxLevel) return `Grow time: ${cur}s`;
             const nxt  = (this.growTimeAt(this.level + 1) / 1000).toFixed(1);
             const diff = ((this.growTimeAt(this.level) - this.growTimeAt(this.level + 1)) / 1000).toFixed(2);
-            return `Grow: ${cur}s\n▸ ${nxt}s (−${diff}s)`;
+            return `Grow time: ${cur}s\n▸ ${nxt}s (−${diff}s)`;
         },
     },
     // 2 – Rich Gains (gentler cost curve)
@@ -600,13 +600,13 @@ const UPGRADES = [
     {
         id: 'fructify', name: 'FRUCTIFY', maxLevel: 5, level: 0,
         currency: 'wood',
-        costBase: 10, costMult: 2.2,
+        costBase: 50, costMult: 2.2,
         cost() { return Math.ceil(this.costBase * Math.pow(this.costMult, this.level)); },
         fruitChance() { return this.level * 0.2; },
         effectText() {
             const cur = (this.fruitChance() * 100).toFixed(0);
-            if (this.level >= this.maxLevel) return `Fruit: ${cur}%`;
-            return `Fruit: ${cur}%\n▸ ${(this.level + 1) * 20}% chance`;
+            if (this.level >= this.maxLevel) return `Chance to have fruit: ${cur}%`;
+            return `Chance to have fruit: ${cur}%\n▸ ${(this.level + 1) * 20}% chance`;
         },
     },
     // 5 – Forester's Lodge (auto-chop)
@@ -623,26 +623,26 @@ const UPGRADES = [
             return `Auto-Chop: ${cur}/s\n▸ ${cur + 1}/s`;
         },
     },
-    // 6 – Selective Breeding (costs Food)
+    // 6 – Harvest Buckets (costs Wood)
     {
-        id: 'breeding', name: 'SELECTIVE BREEDING', maxLevel: 10, level: 0,
-        currency: 'food',
-        costBase: 3, costMult: 1.7,
+        id: 'buckets', name: 'HARVEST BUCKETS', maxLevel: 10, level: 0,
+        currency: 'wood',
+        costBase: 300, costMult: 1.8,
         cost() { return Math.ceil(this.costBase * Math.pow(this.costMult, this.level)); },
-        multiplier() { return Math.pow(1.5, this.level); },
+        multiplier() { return Math.pow(1.25, this.level); },
         effectText() {
             const cur = this.multiplier().toFixed(2);
-            if (this.level >= this.maxLevel) return `Food×: ${cur}`;
-            const nxt = Math.pow(1.5, this.level + 1).toFixed(2);
-            return `Food×: ${cur}\n▸ ×${nxt} (+50%)`;
+            if (this.level >= this.maxLevel) return `Food from fruits\n×${cur}`;
+            const nxt = Math.pow(1.25, this.level + 1).toFixed(2);
+            return `Food from fruits\n×${cur} → ×${nxt}`;
         },
     },
     // 7 – Build Farm (one-time, mixed cost)
     {
         id: 'farm', name: 'BUILD FARM', maxLevel: 1, level: 0,
-        currency: 'mixed',
-        woodCost: 0, foodCost: 0,
-        cost() { return this.woodCost; },
+        currency: 'food',
+        costBase: 100, costMult: 1,
+        cost() { return 100; },
         effectText() {
             if (this.level >= this.maxLevel) return 'Farm: Open';
             return 'Unlock\nFarm tab';
@@ -684,8 +684,8 @@ const UPGRADES = [
         effectText() {
             const cur = Math.pow(2, this.level);
             const nxt = Math.pow(2, this.level + 1);
-            if (this.level >= this.maxLevel) return `Food from Fruit\nx${Math.pow(2, this.maxLevel)}`;
-            return `Food from Fruit\nx${cur} → x${nxt}`;
+            if (this.level >= this.maxLevel) return `Food from Fruits\nx${Math.pow(2, this.maxLevel)}`;
+            return `Food from Fruits\nx${cur} → x${nxt}`;
         },
     },
     // 11 – New Plot (farm upgrade)
@@ -701,6 +701,36 @@ const UPGRADES = [
             return `Plots: ${plots}\n→ ${plots + 1} plots`;
         },
     },
+    // 12 – Pure Line Selection (farm upgrade)
+    {
+        id: 'pureline', name: 'PURE LINE SELECTION', maxLevel: 10, level: 0,
+        currency: 'mixed',
+        get woodCost() { return Math.ceil(500 * Math.pow(1.7, this.level)); },
+        get foodCost() { return Math.ceil(100 * Math.pow(1.7, this.level)); },
+        cost() { return this.woodCost; },
+        multiplier() { return Math.pow(1.5, this.level); },
+        effectText() {
+            const cur = this.multiplier().toFixed(2);
+            if (this.level >= this.maxLevel) return `Food from Wheat\n×${cur}`;
+            const nxt = Math.pow(1.5, this.level + 1).toFixed(2);
+            return `Food from Wheat\n×${cur} → ×${nxt}`;
+        },
+    },
+    // 13 – Leaf Litter (farm upgrade)
+    {
+        id: 'leaflitter', name: 'LEAF LITTER', maxLevel: 10, level: 0,
+        currency: 'mixed',
+        get woodCost() { return Math.ceil(800 * Math.pow(1.7, this.level)); },
+        get foodCost() { return Math.ceil(150 * Math.pow(1.7, this.level)); },
+        cost() { return this.woodCost; },
+        multiplier() { return Math.pow(1.5, this.level); },
+        effectText() {
+            const cur = this.multiplier().toFixed(2);
+            if (this.level >= this.maxLevel) return `Wood from Trees\n×${cur}`;
+            const nxt = Math.pow(1.5, this.level + 1).toFixed(2);
+            return `Wood from Trees\n×${cur} → ×${nxt}`;
+        },
+    },
 ];
 
 function getGrowTime()          { return UPGRADES[1].growTimeAt(UPGRADES[1].level); }
@@ -712,6 +742,8 @@ function getLodgeCPS()          { return UPGRADES[5].clicksPerSec(); }
 function getSwipesNeeded()      { return WHEAT_SWIPES_NEEDED - UPGRADES[8].level; }
 function getWheatGrowTime()     { return WHEAT_GROW_TIME - UPGRADES[9].level * (5000 / 15); }
 function getCropRotMult()       { return Math.pow(2, UPGRADES[10].level); }
+function getPureLineMult()      { return UPGRADES[12].multiplier(); }
+function getLeafLitterMult()   { return UPGRADES[13].multiplier(); }
 function formatNum(n)        { return Number.isInteger(n) ? n : n.toFixed(2); }
 
 // ═══════════════════════════════════════════════════════════════
@@ -1331,10 +1363,12 @@ function harvestWheat(plotIdx) {
     if (!plot || !plot.grown) return;
     plot.swipeCount = (plot.swipeCount || 0) + 1;
     if (plot.swipeCount < getSwipesNeeded()) return;
-    game.food += WHEAT_FOOD_YIELD;
+    game.food += WHEAT_FOOD_YIELD * getPureLineMult();
     const cx = getPlotLayout()[plotIdx]?.cx ?? W / 2;
     const floatSize = Math.max(14, Math.round(52 / game.farm.plots.length));
-    spawnFloat(cx, Math.round(H * 0.35), `+${WHEAT_FOOD_YIELD} FOOD`, '#E8B020', floatSize);
+    const wheatYield = WHEAT_FOOD_YIELD * getPureLineMult();
+    const wheatLabel = Number.isInteger(wheatYield) ? `+${wheatYield} FOOD` : `+${wheatYield.toFixed(1)} FOOD`;
+    spawnFloat(cx, Math.round(H * 0.35), wheatLabel, '#E8B020', floatSize);
     plot.growth    = 0;
     plot.grown     = false;
     plot.readyPing = false;
@@ -1498,7 +1532,7 @@ let lastTs = 0;
 let lastHudSync = 0;
 
 function chopTree(tree, cx) {
-    const gained = getWoodMultiplier();
+    const gained = getWoodMultiplier() * getLeafLitterMult();
     game.wood += gained;
     const wLabel = gained % 1 === 0 ? `+${gained} WOOD` : `+${gained.toFixed(2)} WOOD`;
     if (activeTab !== 'farm') spawnFloat(cx, GROUND - TREE_ART[3].length * P - 20, wLabel, '#c8a450');
@@ -1816,7 +1850,6 @@ function devMaxAll() {
     }
     devMaxUsed = true;
     UPGRADES.forEach((u, i) => {
-        if (i === 6) return; // skip Selective Breeding
         if (i >= 8) return;  // skip Farm tab upgrades
         u.level = u.maxLevel;
     });
