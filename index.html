@@ -87,6 +87,8 @@
         .tab-btn:last-child { border-right: none; }
         .tab-btn.active { color: #c8a450; background: #100a04; text-shadow: 0 0 8px #8B6320; }
         .tab-btn:hover:not(.active) { color: #7a6040; }
+        @keyframes tab-new-pulse { 0%,100% { box-shadow: 0 0 6px 2px #e8a040; color: #e8a040; } 50% { box-shadow: 0 0 14px 4px #e8a040; color: #f0c060; } }
+        .tab-btn.new { animation: tab-new-pulse 1s ease-in-out infinite; }
 
         /* ── Upgrade panel ── */
         #upgrade-panel {
@@ -664,7 +666,7 @@ function makeTree() {
 }
 
 function makePlot() {
-    return { growth: 0, grown: false, readyPing: false };
+    return { growth: 0, grown: false, readyPing: false, swipeCount: 0 };
 }
 
 const game = {
@@ -692,8 +694,8 @@ function spawnChips(x, y) {
 }
 
 const floats = [];
-function spawnFloat(x, y, text, color) {
-    floats.push({ x, y, text, color, life: 1 });
+function spawnFloat(x, y, text, color, size) {
+    floats.push({ x, y, text, color, life: 1, size: size || 13 });
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -1018,7 +1020,7 @@ function drawFloats() {
     for (const f of floats) {
         ctx.globalAlpha = f.life;
         ctx.fillStyle   = f.color;
-        ctx.font        = 'bold 13px "Courier New"';
+        ctx.font        = `bold ${f.size || 13}px "Courier New"`;
         ctx.fillText(f.text, f.x, Math.round(f.y));
     }
     ctx.globalAlpha = 1;
@@ -1198,7 +1200,9 @@ function buyUpgrade(idx) {
         spawnFloat(W / 2, GROUND * 0.15, '✦ NEW TREE PLANTED ✦', '#6DC040');
     }
     if (u.id === 'farm') {
-        document.getElementById('tab-farm-btn').style.display = '';
+        const farmBtn = document.getElementById('tab-farm-btn');
+        farmBtn.style.display = '';
+        farmBtn.classList.add('new');
         spawnFloat(W / 2, GROUND * 0.15, '✦ FARM UNLOCKED ✦', '#e8a040');
     }
 
@@ -1218,7 +1222,9 @@ function switchTab(tab) {
     document.getElementById('tab-wood').classList.toggle('hidden', tab !== 'wood');
     document.getElementById('tab-farm').classList.toggle('active', tab === 'farm');
     document.getElementById('tab-wood-btn').classList.toggle('active', tab === 'wood');
-    document.getElementById('tab-farm-btn').classList.toggle('active', tab === 'farm');
+    const farmBtn = document.getElementById('tab-farm-btn');
+    farmBtn.classList.toggle('active', tab === 'farm');
+    if (tab === 'farm') farmBtn.classList.remove('new');
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -1226,15 +1232,20 @@ function switchTab(tab) {
 // ═══════════════════════════════════════════════════════════════
 const WHEAT_GROW_TIME = 10000; // 10 seconds
 
+const WHEAT_SWIPES_NEEDED = 5;
+const WHEAT_FOOD_YIELD    = 100;
+
 function harvestWheat(plotIdx) {
     const plot = game.farm.plots[plotIdx];
     if (!plot || !plot.grown) return;
-    const gained = 10;
-    game.food += gained;
-    spawnFloat(W / 2, Math.round(H * 0.35), `+${gained} FOOD`, '#E8B020');
-    plot.growth   = 0;
-    plot.grown    = false;
+    plot.swipeCount = (plot.swipeCount || 0) + 1;
+    if (plot.swipeCount < WHEAT_SWIPES_NEEDED) return;
+    game.food += WHEAT_FOOD_YIELD;
+    spawnFloat(W / 2, Math.round(H * 0.35), `+${WHEAT_FOOD_YIELD} FOOD`, '#E8B020', 52);
+    plot.growth    = 0;
+    plot.grown     = false;
     plot.readyPing = false;
+    plot.swipeCount = 0;
     document.getElementById('food-hud').classList.remove('hidden');
     document.getElementById('foodCount').textContent = formatNum(game.food);
     saveGame();
@@ -1381,7 +1392,11 @@ function drawFarmScene(ts) {
         ctx.fillStyle = '#E8C040';
         ctx.font = `bold ${fSize}px "Courier New"`;
         ctx.textAlign = 'center';
-        ctx.fillText('\u2190 SWIPE TO HARVEST \u2192', W / 2, barY + barH2 + fSize + 2);
+        const sc = plot.swipeCount || 0;
+        const harvestLabel = sc > 0
+            ? `\u2190 SWIPE ${sc}/${WHEAT_SWIPES_NEEDED} \u2192`
+            : '\u2190 SWIPE TO HARVEST \u2192';
+        ctx.fillText(harvestLabel, W / 2, barY + barH2 + fSize + 2);
         ctx.globalAlpha = 1;
     }
 
