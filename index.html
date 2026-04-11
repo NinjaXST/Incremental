@@ -199,16 +199,9 @@
         /* ── Farm tab ── */
         #tab-farm {
             display: none;
-            flex: 1;
             flex-direction: column;
         }
         #tab-farm.active { display: flex; }
-        #farmCanvas {
-            display: block;
-            width: 100%;
-            flex: 1;
-            image-rendering: pixelated;
-        }
 
         /* ── Save indicator ── */
         #save-indicator {
@@ -384,7 +377,6 @@
                 <button class="tab-btn" id="tab-farm-btn" style="display:none">FARM</button>
             </div>
             <div id="tab-wood">
-                <div class="panel-header">UPGRADES</div>
                 <div class="cards-row">
                     <div id="upg-0" class="upg-card"></div>
                     <div id="upg-1" class="upg-card"></div>
@@ -399,7 +391,18 @@
                 </div>
             </div>
             <div id="tab-farm">
-                <canvas id="farmCanvas"></canvas>
+                <div class="cards-row">
+                    <div class="upg-card maxed"><div class="upg-name">—</div><div class="upg-cost-row">LOCKED</div></div>
+                    <div class="upg-card maxed"><div class="upg-name">—</div><div class="upg-cost-row">LOCKED</div></div>
+                    <div class="upg-card maxed"><div class="upg-name">—</div><div class="upg-cost-row">LOCKED</div></div>
+                    <div class="upg-card maxed"><div class="upg-name">—</div><div class="upg-cost-row">LOCKED</div></div>
+                </div>
+                <div class="cards-row">
+                    <div class="upg-card maxed"><div class="upg-name">—</div><div class="upg-cost-row">LOCKED</div></div>
+                    <div class="upg-card maxed"><div class="upg-name">—</div><div class="upg-cost-row">LOCKED</div></div>
+                    <div class="upg-card maxed"><div class="upg-name">—</div><div class="upg-cost-row">LOCKED</div></div>
+                    <div class="upg-card maxed"><div class="upg-name">—</div><div class="upg-cost-row">LOCKED</div></div>
+                </div>
             </div>
         </div>
     </div>
@@ -635,7 +638,7 @@ const UPGRADES = [
     {
         id: 'farm', name: 'BUILD FARM', maxLevel: 1, level: 0,
         currency: 'mixed',
-        woodCost: 50, foodCost: 10,
+        woodCost: 0, foodCost: 0,
         cost() { return this.woodCost; },
         effectText() {
             if (this.level >= this.maxLevel) return 'Farm: Open';
@@ -660,7 +663,16 @@ function makeTree() {
              shakeTimer: 0, shakeX: 0, readyPing: false };
 }
 
-const game = { wood: 0, food: 0, trees: [makeTree()], firstChopDone: false, lodgeAccum: 0 };
+function makePlot() {
+    return { growth: 0, grown: false, readyPing: false };
+}
+
+const game = {
+    wood: 0, food: 0,
+    trees: [makeTree()],
+    firstChopDone: false, lodgeAccum: 0,
+    farm: { plots: [makePlot()] },
+};
 
 // ═══════════════════════════════════════════════════════════════
 //  PARTICLES & FLOATS
@@ -1202,65 +1214,178 @@ let activeTab = 'wood';
 
 function switchTab(tab) {
     activeTab = tab;
-    const woodEl  = document.getElementById('tab-wood');
-    const farmEl  = document.getElementById('tab-farm');
-    const woodBtn = document.getElementById('tab-wood-btn');
-    const farmBtn = document.getElementById('tab-farm-btn');
-
-    if (tab === 'wood') {
-        woodEl.classList.remove('hidden');
-        farmEl.classList.remove('active');
-        woodBtn.classList.add('active');
-        farmBtn.classList.remove('active');
-    } else {
-        woodEl.classList.add('hidden');
-        farmEl.classList.add('active');
-        woodBtn.classList.remove('active');
-        farmBtn.classList.add('active');
-        drawFarm();
-    }
+    floats.length = 0; // clear any pending floats from the other tab
+    document.getElementById('tab-wood').classList.toggle('hidden', tab !== 'wood');
+    document.getElementById('tab-farm').classList.toggle('active', tab === 'farm');
+    document.getElementById('tab-wood-btn').classList.toggle('active', tab === 'wood');
+    document.getElementById('tab-farm-btn').classList.toggle('active', tab === 'farm');
 }
 
-function drawFarm() {
-    const fc = document.getElementById('farmCanvas');
-    if (!fc) return;
-    // Size the farm canvas to fill its container
-    const farmEl = document.getElementById('tab-farm');
-    const rect   = farmEl.getBoundingClientRect();
-    const fw = Math.round(rect.width)  || 400;
-    const fh = Math.round(rect.height) || 200;
-    fc.width  = fw;
-    fc.height = fh;
+// ═══════════════════════════════════════════════════════════════
+//  FARM SCENE
+// ═══════════════════════════════════════════════════════════════
+const WHEAT_GROW_TIME = 10000; // 10 seconds
 
-    const fctx = fc.getContext('2d');
+function harvestWheat(plotIdx) {
+    const plot = game.farm.plots[plotIdx];
+    if (!plot || !plot.grown) return;
+    const gained = 10;
+    game.food += gained;
+    spawnFloat(W / 2, Math.round(H * 0.35), `+${gained} FOOD`, '#E8B020');
+    plot.growth   = 0;
+    plot.grown    = false;
+    plot.readyPing = false;
+    document.getElementById('food-hud').classList.remove('hidden');
+    document.getElementById('foodCount').textContent = formatNum(game.food);
+    saveGame();
+}
 
-    // Sky band at top
-    const skyH = Math.round(fh * 0.22);
-    const skyG = fctx.createLinearGradient(0, 0, 0, skyH);
-    skyG.addColorStop(0, '#5090d0');
-    skyG.addColorStop(1, '#7ab8e8');
-    fctx.fillStyle = skyG;
-    fctx.fillRect(0, 0, fw, skyH);
+function drawFarmScene(ts) {
+    const plot = game.farm.plots[0];
 
-    // Plowed field rows
-    const rowH = 20;
-    const rows = Math.ceil((fh - skyH) / rowH);
-    for (let r = 0; r < rows; r++) {
-        fctx.fillStyle = r % 2 === 0 ? '#5a3018' : '#472810';
-        fctx.fillRect(0, skyH + r * rowH, fw, rowH);
-        // Furrow shadow
-        fctx.fillStyle = '#2a1508';
-        fctx.fillRect(0, skyH + r * rowH + rowH - 3, fw, 3);
+    // ── Sky ──
+    const skyH = Math.round(H * 0.38);
+    const skyGrad = ctx.createLinearGradient(0, 0, 0, skyH);
+    skyGrad.addColorStop(0, '#3870b8');
+    skyGrad.addColorStop(1, '#68a8e0');
+    ctx.fillStyle = skyGrad;
+    ctx.fillRect(0, 0, W, skyH);
+
+    // Clouds
+    ctx.globalAlpha = 0.55;
+    ctx.fillStyle = '#e8f4ff';
+    ctx.beginPath();
+    ctx.ellipse(Math.round(W * 0.22), Math.round(skyH * 0.35), 38, 14, 0, 0, Math.PI * 2);
+    ctx.ellipse(Math.round(W * 0.24), Math.round(skyH * 0.28), 26, 16, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.ellipse(Math.round(W * 0.68), Math.round(skyH * 0.45), 44, 12, 0, 0, Math.PI * 2);
+    ctx.ellipse(Math.round(W * 0.70), Math.round(skyH * 0.36), 28, 15, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.globalAlpha = 1;
+
+    // ── Hedgerow horizon ──
+    ctx.fillStyle = '#2a5c18';
+    ctx.fillRect(0, skyH - 10, W, 18);
+    ctx.fillStyle = '#1e4810';
+    ctx.fillRect(0, skyH + 4, W, 8);
+
+    // ── Ground / soil ──
+    const groundY = skyH + 12;
+    const soilGrad = ctx.createLinearGradient(0, groundY, 0, H);
+    soilGrad.addColorStop(0, '#5a3018');
+    soilGrad.addColorStop(1, '#2a1508');
+    ctx.fillStyle = soilGrad;
+    ctx.fillRect(0, groundY, W, H - groundY);
+
+    // Soil furrow rows
+    const furrowH = Math.round(H * 0.055);
+    for (let r = 0; r * furrowH + groundY < H; r++) {
+        ctx.fillStyle = r % 2 === 0 ? 'rgba(0,0,0,0.08)' : 'rgba(255,255,255,0.03)';
+        ctx.fillRect(0, groundY + r * furrowH, W, furrowH);
     }
 
-    // Placeholder text
-    fctx.fillStyle = 'rgba(200,164,80,0.55)';
-    fctx.font = `bold ${Math.round(fw * 0.045)}px "Courier New"`;
-    fctx.textAlign = 'center';
-    fctx.fillText('COMING SOON', fw / 2, fh / 2 + 6);
-    fctx.font = `bold ${Math.round(fw * 0.028)}px "Courier New"`;
-    fctx.fillStyle = 'rgba(150,120,60,0.45)';
-    fctx.fillText('PLANT CROPS TO GROW FOOD', fw / 2, fh / 2 + Math.round(fw * 0.065));
+    // ── Wheat plot frame ──
+    const plotX  = Math.round(W * 0.08);
+    const plotW  = Math.round(W * 0.84);
+    const plotTop = groundY + Math.round(H * 0.02);
+    const maxStalkH = Math.round(H * 0.36);
+
+    // Frame
+    ctx.fillStyle = '#2a1808';
+    ctx.fillRect(plotX - 4, plotTop - 4, plotW + 8, maxStalkH + 8);
+    ctx.fillStyle = '#3a2010';
+    ctx.fillRect(plotX, plotTop, plotW, maxStalkH);
+
+    // ── Wheat stalks ──
+    const numStalks = Math.round(plotW / (P * 2));
+    const stalkSpacing = plotW / numStalks;
+    const stalkH = Math.round(plot.growth * maxStalkH);
+
+    if (stalkH > 2) {
+        for (let i = 0; i < numStalks; i++) {
+            const sx = Math.round(plotX + stalkSpacing * (i + 0.5));
+            const sy = plotTop + maxStalkH; // base of stalk
+            const sway = Math.round(Math.sin(ts / 1400 + i * 0.9) * 1.5);
+
+            // Stem
+            ctx.fillStyle = '#5a9020';
+            ctx.fillRect(sx - 1 + sway, sy - stalkH, 2, stalkH);
+            // Stem highlight
+            ctx.fillStyle = '#70b030';
+            ctx.fillRect(sx + sway, sy - stalkH, 1, stalkH);
+
+            // Grain head fades in above 80% growth
+            if (plot.growth > 0.80) {
+                const headAlpha = Math.min(1, (plot.growth - 0.80) / 0.20);
+                const headH = Math.round(P * 2.5);
+                ctx.globalAlpha = headAlpha;
+                // Head body
+                ctx.fillStyle = '#C89020';
+                ctx.fillRect(sx - 3 + sway, sy - stalkH - headH, 6, headH);
+                // Bright tip
+                ctx.fillStyle = '#E8C040';
+                ctx.fillRect(sx - 2 + sway, sy - stalkH - headH - P/2, 4, Math.round(P/2));
+                // Seeds along head
+                ctx.fillStyle = '#A07010';
+                for (let s = 0; s < 3; s++) {
+                    ctx.fillRect(sx - 3 + sway + (s % 2 === 0 ? -1 : 3), sy - stalkH - Math.round(headH * (s + 1) / 4), 2, 2);
+                }
+                ctx.globalAlpha = 1;
+            }
+        }
+    }
+
+    // Glow overlay when ready to harvest
+    if (plot.grown) {
+        const pulse = 0.12 + 0.08 * Math.sin(ts / 350);
+        ctx.fillStyle = `rgba(232,176,32,${pulse})`;
+        ctx.fillRect(plotX, plotTop, plotW, maxStalkH);
+    }
+
+    // ── Progress / harvest bar ──
+    const barY = plotTop + maxStalkH + Math.round(H * 0.04);
+    const barH2 = Math.round(Math.max(10, Math.min(16, H * 0.025)));
+    const fSize = Math.round(Math.max(11, Math.min(16, W * 0.032)));
+
+    ctx.fillStyle = '#1a0d05';
+    ctx.fillRect(plotX - 2, barY - 2, plotW + 4, barH2 + 4);
+    ctx.fillStyle = '#2a1508';
+    ctx.fillRect(plotX, barY, plotW, barH2);
+
+    if (!plot.grown) {
+        const fillW = Math.round(plot.growth * plotW);
+        if (fillW > 0) {
+            ctx.fillStyle = '#5a9020';
+            ctx.fillRect(plotX, barY, fillW, barH2);
+            if (fillW > 3) {
+                ctx.fillStyle = '#70b030';
+                ctx.fillRect(plotX, barY, fillW - 2, barH2 - 3);
+            }
+        }
+        const secsLeft = ((1 - plot.growth) * WHEAT_GROW_TIME / 1000).toFixed(1);
+        ctx.fillStyle = '#6a5030';
+        ctx.font = `bold ${fSize}px "Courier New"`;
+        ctx.textAlign = 'center';
+        ctx.fillText(`GROWING  ${secsLeft}s`, W / 2, barY + barH2 + fSize + 2);
+    } else {
+        // Full gold bar
+        ctx.fillStyle = '#c89020';
+        ctx.fillRect(plotX, barY, plotW, barH2);
+        if (plotW > 3) {
+            ctx.fillStyle = '#e8b030';
+            ctx.fillRect(plotX, barY, plotW - 2, barH2 - 3);
+        }
+        const pulse = 0.7 + 0.3 * Math.sin(ts / 350);
+        ctx.globalAlpha = pulse;
+        ctx.fillStyle = '#E8C040';
+        ctx.font = `bold ${fSize}px "Courier New"`;
+        ctx.textAlign = 'center';
+        ctx.fillText('\u2190 SWIPE TO HARVEST \u2192', W / 2, barY + barH2 + fSize + 2);
+        ctx.globalAlpha = 1;
+    }
+
+    drawFloats();
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -1272,13 +1397,13 @@ function chopTree(tree, cx) {
     const gained = getWoodMultiplier();
     game.wood += gained;
     const wLabel = gained % 1 === 0 ? `+${gained} WOOD` : `+${gained.toFixed(2)} WOOD`;
-    spawnFloat(cx, GROUND - TREE_ART[3].length * P - 20, wLabel, '#c8a450');
+    if (activeTab !== 'farm') spawnFloat(cx, GROUND - TREE_ART[3].length * P - 20, wLabel, '#c8a450');
 
     if (tree.hasFruit) {
         const foodGained = getFoodMultiplier();
         game.food += foodGained;
         const fLabel = foodGained % 1 === 0 ? `+${foodGained} FOOD` : `+${foodGained.toFixed(2)} FOOD`;
-        spawnFloat(cx, GROUND - TREE_ART[3].length * P - 36, fLabel, '#e07020');
+        if (activeTab !== 'farm') spawnFloat(cx, GROUND - TREE_ART[3].length * P - 36, fLabel, '#e07020');
     }
 
     game.firstChopDone = true;
@@ -1310,7 +1435,7 @@ function loop(ts) {
                 // Roll fruit chance
                 const fc = getFruitChance();
                 if (fc > 0 && Math.random() < fc) tree.hasFruit = true;
-                spawnFloat(cx, GROUND - TREE_ART[3].length * P - 20, '✦ READY ✦', '#6DC040');
+                if (activeTab !== 'farm') spawnFloat(cx, GROUND - TREE_ART[3].length * P - 20, '✦ READY ✦', '#6DC040');
             }
         }
 
@@ -1356,15 +1481,30 @@ function loop(ts) {
         if (f.life <= 0) floats.splice(i, 1);
     }
 
-    ctx.clearRect(0, 0, W, H);
-    drawBackground(ts);
-    drawCabin(ts);
-    drawAllTrees(ts);
-    drawParticles();
-    drawFloats();
-    drawUI(ts);
+    // Grow wheat plots regardless of active tab
+    for (const plot of game.farm.plots) {
+        if (!plot.grown) {
+            plot.growth = Math.min(1, plot.growth + dt / WHEAT_GROW_TIME);
+            if (plot.growth >= 1 && !plot.readyPing) {
+                plot.grown     = true;
+                plot.readyPing = true;
+            }
+        }
+    }
 
-    syncPanel();
+    ctx.clearRect(0, 0, W, H);
+    if (activeTab === 'farm') {
+        drawFarmScene(ts);
+    } else {
+        drawBackground(ts);
+        drawCabin(ts);
+        drawAllTrees(ts);
+        drawParticles();
+        drawFloats();
+        drawUI(ts);
+        syncPanel();
+    }
+
     requestAnimationFrame(loop);
 }
 
@@ -1394,15 +1534,40 @@ function handleTap(clientX, clientY) {
     }
 }
 
-canvas.addEventListener('click', (e) => handleTap(e.clientX, e.clientY));
+let swipeStartX = null;
+
+canvas.addEventListener('click', (e) => {
+    if (activeTab === 'wood') handleTap(e.clientX, e.clientY);
+});
+
+canvas.addEventListener('mousedown', (e) => {
+    if (activeTab === 'farm') swipeStartX = e.clientX;
+});
+canvas.addEventListener('mouseup', (e) => {
+    if (activeTab === 'farm' && swipeStartX !== null) {
+        if (Math.abs(e.clientX - swipeStartX) > W * 0.15) harvestWheat(0);
+        swipeStartX = null;
+    }
+});
 
 canvas.addEventListener('touchstart', (e) => {
-    e.preventDefault();
-    const t = e.changedTouches[0];
-    handleTap(t.clientX, t.clientY);
+    if (activeTab === 'farm') {
+        swipeStartX = e.changedTouches[0].clientX;
+    } else {
+        e.preventDefault();
+        handleTap(e.changedTouches[0].clientX, e.changedTouches[0].clientY);
+    }
 }, { passive: false });
 
+canvas.addEventListener('touchend', (e) => {
+    if (activeTab === 'farm' && swipeStartX !== null) {
+        if (Math.abs(e.changedTouches[0].clientX - swipeStartX) > W * 0.15) harvestWheat(0);
+        swipeStartX = null;
+    }
+});
+
 canvas.addEventListener('mousemove', (e) => {
+    if (activeTab !== 'wood') { canvas.style.cursor = 'default'; return; }
     const rect = canvas.getBoundingClientRect();
     const mx   = (e.clientX - rect.left) * (W / rect.width);
     const my   = (e.clientY - rect.top)  * (H / rect.height);
@@ -1428,6 +1593,7 @@ function saveGame() {
                 growth: t.growth, grown: t.grown,
                 clicks: t.clicks, hasFruit: t.hasFruit,
             })),
+            farm: { plots: game.farm.plots.map(p => ({ growth: p.growth, grown: p.grown })) },
         };
         localStorage.setItem(SAVE_KEY, JSON.stringify(data));
 
@@ -1468,6 +1634,15 @@ function loadGame() {
             }));
         }
 
+        // Restore farm state
+        if (data.farm && Array.isArray(data.farm.plots) && data.farm.plots.length > 0) {
+            game.farm.plots = data.farm.plots.map(p => ({
+                growth:    (typeof p.growth === 'number' && isFinite(p.growth)) ? Math.max(0, Math.min(1, p.growth)) : 0,
+                grown:     p.grown === true,
+                readyPing: p.grown === true,
+            }));
+        }
+
         // Restore UI state
         if (UPGRADES[7].level > 0) {
             document.getElementById('tab-farm-btn').style.display = '';
@@ -1495,6 +1670,7 @@ function resetGameState() {
     game.firstChopDone = false;
     game.lodgeAccum    = 0;
     game.trees         = [makeTree()];
+    game.farm          = { plots: [makePlot()] };
     UPGRADES.forEach(u => u.level = 0);
     document.getElementById('tab-farm-btn').style.display = 'none';
     document.getElementById('food-hud').classList.add('hidden');
