@@ -11,7 +11,706 @@
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            min-height: 100vh;
+            min-height: 100vh;<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Woodland</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        html, body {
+            height: 100%;
+            height: 100dvh;
+            overflow: hidden;
+        }
+        body {
+            background: #0d0a07;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            font-family: 'Courier New', Courier, monospace;
+            font-weight: bold;
+            user-select: none;
+        }
+
+        #wrapper {
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+            max-width: 600px;
+            height: 100%;
+        }
+
+        /* Canvas fills all space above the panel */
+        #gameCanvas {
+            display: block;
+            width: 100%;
+            flex: 1;
+            min-height: 0;
+            border-bottom: 3px solid #4a2e10;
+            image-rendering: pixelated;
+            cursor: default;
+        }
+
+        /* HUD bar sits between canvas and upgrade panel */
+        #hud {
+            flex-shrink: 0;
+            background: #0d0a07;
+            color: #c8a450;
+            font-size: clamp(13px, 3.5vw, 17px);
+            font-weight: 900;
+            letter-spacing: 4px;
+            text-transform: uppercase;
+            text-shadow: 0 0 10px #8B6320;
+            text-align: center;
+            padding: 6px 0;
+            border-bottom: 2px solid #2a1508;
+        }
+        #hud span { color: #e8d090; }
+
+        /* ── Upgrade panel ── */
+        #upgrade-panel {
+            flex-shrink: 0;
+            background: #080604;
+            border-top: 3px solid #4a2e10;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        .panel-header {
+            color: #c8a450;
+            font-size: clamp(10px, 2.8vw, 13px);
+            font-weight: 900;
+            letter-spacing: 5px;
+            text-align: center;
+            padding: 7px 0;
+            border-bottom: 2px solid #3a1e08;
+            background: #100a04;
+            text-shadow: 0 0 8px #8B6320;
+            flex-shrink: 0;
+        }
+        #cards-row {
+            display: flex;
+            flex-direction: row;
+            flex: 1;
+        }
+        .upg-card {
+            border-right: 1px solid #221408;
+            padding: clamp(6px, 2vw, 11px) clamp(5px, 1.8vw, 11px);
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            transition: background 0.1s;
+            min-width: 0;
+        }
+        .upg-card:last-child { border-right: none; }
+        .upg-card.affordable { cursor: pointer; }
+        .upg-card.affordable:hover,
+        .upg-card.affordable:active { background: #130d06; }
+        .upg-card.broke { cursor: default; }
+        .upg-card.maxed { cursor: default; opacity: 0.45; }
+
+        .upg-name {
+            color: #c8a450;
+            font-size: clamp(9px, 2.4vw, 12px);
+            font-weight: 900;
+            letter-spacing: 1px;
+        }
+        .upg-effect {
+            color: #7a9860;
+            font-size: clamp(8px, 2vw, 11px);
+            font-weight: bold;
+            line-height: 1.4;
+            flex: 1;
+        }
+        .upg-next {
+            color: #506840;
+            font-size: clamp(7px, 1.8vw, 10px);
+        }
+        .upg-lvl-row {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .upg-lvlbar-bg {
+            flex: 1;
+            height: 5px;
+            background: #1e1108;
+            border: 1px solid #3a1e08;
+        }
+        .upg-lvlbar-fill {
+            height: 100%;
+            background: #7a5018;
+            transition: width 0.2s;
+        }
+        .upg-lvl-text {
+            color: #6a5030;
+            font-size: clamp(7px, 1.8vw, 10px);
+            font-weight: bold;
+            white-space: nowrap;
+        }
+        .upg-cost-row {
+            font-size: clamp(9px, 2.4vw, 12px);
+            font-weight: 900;
+            letter-spacing: 0.5px;
+            margin-top: 2px;
+            padding: clamp(4px, 1.2vw, 6px) 4px;
+            border: 1px solid #3a1e08;
+            text-align: center;
+        }
+        .affordable .upg-cost-row { color: #6DC040; border-color: #3a6020; background: #0d1808; }
+        .affordable:hover .upg-cost-row,
+        .affordable:active .upg-cost-row { background: #122010; }
+        .broke .upg-cost-row { color: #4a3520; border-color: #2a1508; }
+        .maxed .upg-cost-row { color: #3a2810; border-color: #221408; }
+    </style>
+</head>
+<body>
+    <div id="wrapper">
+        <canvas id="gameCanvas"></canvas>
+        <div id="hud">Wood: <span id="woodCount">0</span></div>
+        <div id="upgrade-panel">
+            <div class="panel-header">UPGRADES</div>
+            <div id="cards-row">
+                <div id="upg-0" class="upg-card"></div>
+                <div id="upg-1" class="upg-card"></div>
+                <div id="upg-2" class="upg-card"></div>
+            </div>
+        </div>
+    </div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════
+//  CANVAS & DYNAMIC DIMENSIONS
+// ═══════════════════════════════════════════════════════════════
+const canvas = document.getElementById('gameCanvas');
+const ctx    = canvas.getContext('2d');
+const P = 8; // pixel-art cell size
+
+let W, H, GROUND;
+let STARS = [];
+let BG_TREES = [];
+
+function resizeCanvas() {
+    // Sync internal canvas resolution to its CSS-rendered size
+    const rect = canvas.getBoundingClientRect();
+    W = Math.round(rect.width)  || 390;
+    H = Math.round(rect.height) || 500;
+    canvas.width  = W;
+    canvas.height = H;
+
+    GROUND = Math.round(H * 0.68);
+
+    // Regenerate random elements relative to new dimensions
+    STARS = Array.from({ length: 55 }, () => ({
+        x:  Math.random() * W,
+        y:  Math.random() * Math.max(GROUND - 80, 20),
+        s:  Math.random() < 0.25 ? 2 : 1,
+        tw: Math.random() * Math.PI * 2,
+    }));
+
+    BG_TREES = [
+        { x: Math.round(W * 0.07), h: 48 },
+        { x: Math.round(W * 0.18), h: 36 },
+        { x: Math.round(W * 0.29), h: 55 },
+        { x: Math.round(W * 0.71), h: 50 },
+        { x: Math.round(W * 0.82), h: 38 },
+        { x: Math.round(W * 0.93), h: 44 },
+    ];
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  PIXEL ART TREES
+// ═══════════════════════════════════════════════════════════════
+// ' '=air  T=trunk  M=leaf-mid  L=leaf-light  H=leaf-highlight
+const TREE_ART = [
+    // 0 – Sapling (0–20%)
+    [' L ',
+     ' T ',
+     ' T '],
+    // 1 – Sprout (20–50%)
+    [' L ',
+     'LML',
+     ' T ',
+     ' T ',
+     ' T '],
+    // 2 – Young (50–85%)
+    ['  M  ',
+     ' LML ',
+     'LMMML',
+     ' LML ',
+     '  T  ',
+     '  T  ',
+     '  T  ',
+     '  T  ',
+     '  T  '],
+    // 3 – Full (85–100%)
+    ['   H   ',
+     '  HMH  ',
+     ' MMMMM ',
+     'LMMMMML',
+     'MMMMMMM',
+     'LMMMMML',
+     ' MMMMM ',
+     '  LML  ',
+     '   T   ',
+     '   T   ',
+     '   T   ',
+     '   T   ',
+     '   T   ',
+     '   T   '],
+];
+
+const PALETTE = { ' ':null, T:'#7B4A1E', M:'#3D7228', L:'#52922E', H:'#6DC040' };
+
+// ═══════════════════════════════════════════════════════════════
+//  UPGRADES
+// ═══════════════════════════════════════════════════════════════
+const UPGRADES = [
+    {
+        id: 'growSpeed', name: 'SWIFT ROOTS',
+        maxLevel: 20, level: 0, costBase: 2, costMult: 2.2,
+        cost() { return Math.ceil(this.costBase * Math.pow(this.costMult, this.level)); },
+        growTimeAt(lvl) {
+            if (lvl === 0) return 10000;
+            return Math.max(2000, 10000 - 4000 * (1 - Math.pow(0.75, lvl)));
+        },
+        effectText() {
+            const cur = (this.growTimeAt(this.level) / 1000).toFixed(1);
+            if (this.level >= this.maxLevel) return `Grow: ${cur}s`;
+            const nxt  = (this.growTimeAt(this.level + 1) / 1000).toFixed(1);
+            const diff = ((this.growTimeAt(this.level) - this.growTimeAt(this.level + 1)) / 1000).toFixed(2);
+            return `Grow: ${cur}s\n▸ ${nxt}s (−${diff}s)`;
+        },
+    },
+    {
+        id: 'chops', name: 'KEEN BLADE',
+        maxLevel: 5, level: 0, costBase: 3, costMult: 3.2,
+        cost() { return Math.ceil(this.costBase * Math.pow(this.costMult, this.level)); },
+        effectText() {
+            const cur = 10 - this.level;
+            if (this.level >= this.maxLevel) return `Chops: ${cur}`;
+            return `Chops: ${cur}\n▸ ${cur - 1} (−1)`;
+        },
+    },
+    {
+        id: 'trees', name: 'PLANT TREE',
+        maxLevel: 4, level: 0, costBase: 10, costMult: 5.0,
+        cost() { return Math.ceil(this.costBase * Math.pow(this.costMult, this.level)); },
+        effectText() {
+            const cur = 1 + this.level;
+            if (this.level >= this.maxLevel) return `Trees: ${cur} (max)`;
+            return `Trees: ${cur}\n▸ ${cur + 1} (×2 yield)`;
+        },
+    },
+];
+
+function getGrowTime()     { return UPGRADES[0].growTimeAt(UPGRADES[0].level); }
+function getClicksNeeded() { return 10 - UPGRADES[1].level; }
+
+// ═══════════════════════════════════════════════════════════════
+//  GAME STATE
+// ═══════════════════════════════════════════════════════════════
+function makeTree() {
+    return { growth: 0, grown: false, clicks: 0,
+             shakeTimer: 0, shakeX: 0, readyPing: false };
+}
+
+const game = { wood: 0, trees: [makeTree()] };
+
+// ═══════════════════════════════════════════════════════════════
+//  PARTICLES & FLOATS
+// ═══════════════════════════════════════════════════════════════
+const particles = [];
+function spawnChips(x, y) {
+    for (let i = 0; i < 7; i++) {
+        particles.push({
+            x, y,
+            vx: (Math.random() - 0.5) * 5,
+            vy: -Math.random() * 6 - 1,
+            life: 1,
+            color: ['#7B4A1E','#A0602A','#C87A38'][Math.floor(Math.random() * 3)],
+            size: (Math.floor(Math.random() * 3) + 1) * 2,
+        });
+    }
+}
+
+const floats = [];
+function spawnFloat(x, y, text, color) {
+    floats.push({ x, y, text, color, life: 1 });
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  HELPERS
+// ═══════════════════════════════════════════════════════════════
+function getStage(growth) {
+    if (growth < 0.20) return 0;
+    if (growth < 0.50) return 1;
+    if (growth < 0.85) return 2;
+    return 3;
+}
+
+function treeCenters() {
+    const n = game.trees.length;
+    return Array.from({ length: n }, (_, i) => Math.round(W * (i + 1) / (n + 1)));
+}
+
+function treeRect(cx, tree) {
+    const art  = TREE_ART[getStage(tree.growth)];
+    const cols = art[0].length;
+    const rows = art.length;
+    const ox   = Math.round(cx - (cols / 2) * P) + (tree.shakeTimer > 0 ? Math.round(tree.shakeX) : 0);
+    return { ox, oy: GROUND - rows * P, cols, rows };
+}
+
+function hitTest(mx, my, cx, tree) {
+    const { ox, oy, cols, rows } = treeRect(cx, tree);
+    return mx >= ox && mx <= ox + cols * P && my >= oy && my <= oy + rows * P;
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  DRAWING
+// ═══════════════════════════════════════════════════════════════
+function drawBackground(ts) {
+    // Sky gradient
+    const sky = ctx.createLinearGradient(0, 0, 0, GROUND);
+    sky.addColorStop(0, '#141e2d');
+    sky.addColorStop(1, '#1e3328');
+    ctx.fillStyle = sky;
+    ctx.fillRect(0, 0, W, GROUND);
+
+    // Stars
+    for (const s of STARS) {
+        ctx.globalAlpha = 0.5 + 0.5 * Math.sin(ts / 1800 + s.tw);
+        ctx.fillStyle = '#e8dfc0';
+        ctx.fillRect(Math.round(s.x), Math.round(s.y), s.s, s.s);
+    }
+    ctx.globalAlpha = 1;
+
+    // Crescent moon (top-right area)
+    const mx = Math.round(W * 0.87), my = Math.round(GROUND * 0.12);
+    ctx.fillStyle = '#e8dfc0';
+    ctx.beginPath(); ctx.arc(mx, my, 18, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#141e2d';
+    ctx.beginPath(); ctx.arc(mx - 8, my - 5, 15, 0, Math.PI * 2); ctx.fill();
+
+    // Silhouette trees
+    ctx.fillStyle = '#182818';
+    for (const bt of BG_TREES) {
+        ctx.fillRect(bt.x - 13, GROUND - bt.h, 26, bt.h - 10);
+        ctx.fillRect(bt.x - 3,  GROUND - 11,   6,  11);
+    }
+
+    // Ground
+    const gnd = ctx.createLinearGradient(0, GROUND, 0, H);
+    gnd.addColorStop(0, '#2a1a0a');
+    gnd.addColorStop(1, '#1a0d05');
+    ctx.fillStyle = gnd;
+    ctx.fillRect(0, GROUND, W, H - GROUND);
+
+    // Grass rows
+    ctx.fillStyle = '#2d6b20'; ctx.fillRect(0, GROUND,     W, P);
+    ctx.fillStyle = '#245c18'; ctx.fillRect(0, GROUND + P, W, P);
+
+    // Grass tufts
+    ctx.fillStyle = '#3a8828';
+    for (let gx = 16; gx < W; gx += 48) {
+        ctx.fillRect(gx,      GROUND - P,     P,   P);
+        ctx.fillRect(gx + 18, GROUND - P + 2, P-1, P-1);
+        ctx.fillRect(gx + 34, GROUND - P,     P-1, P);
+    }
+}
+
+function drawOneTree(ts, cx, tree) {
+    const { ox, oy, cols, rows } = treeRect(cx, tree);
+    const art = TREE_ART[getStage(tree.growth)];
+
+    if (tree.grown) {
+        ctx.shadowColor = '#6DC040';
+        ctx.shadowBlur  = (0.4 + 0.2 * Math.sin(ts / 350)) * 18;
+    }
+    for (let r = 0; r < rows; r++) {
+        for (let c = 0; c < art[r].length; c++) {
+            const col = PALETTE[art[r][c]];
+            if (!col) continue;
+            ctx.fillStyle = col;
+            ctx.fillRect(ox + c * P, oy + r * P, P, P);
+        }
+    }
+    ctx.shadowBlur = 0;
+}
+
+function drawAllTrees(ts) {
+    const centers = treeCenters();
+    for (let i = 0; i < game.trees.length; i++) {
+        drawOneTree(ts, centers[i], game.trees[i]);
+    }
+}
+
+function drawParticles() {
+    for (const p of particles) {
+        ctx.globalAlpha = p.life;
+        ctx.fillStyle   = p.color;
+        ctx.fillRect(Math.round(p.x), Math.round(p.y), p.size, p.size);
+    }
+    ctx.globalAlpha = 1;
+}
+
+function drawFloats() {
+    ctx.textAlign = 'center';
+    for (const f of floats) {
+        ctx.globalAlpha = f.life;
+        ctx.fillStyle   = f.color;
+        ctx.font        = 'bold 13px "Courier New"';
+        ctx.fillText(f.text, f.x, Math.round(f.y));
+    }
+    ctx.globalAlpha = 1;
+}
+
+function drawUI(ts) {
+    const centers      = treeCenters();
+    const clicksNeeded = getClicksNeeded();
+    const barW = Math.max(55, Math.min(110, Math.floor(W / game.trees.length) - 20));
+    const barH = 8;
+    const by   = GROUND + 18;
+
+    for (let i = 0; i < game.trees.length; i++) {
+        const tree = game.trees[i];
+        const cx   = centers[i];
+        const bx   = Math.round(cx - barW / 2);
+
+        ctx.fillStyle = '#1a0d05';
+        ctx.fillRect(bx - 2, by - 2, barW + 4, barH + 4);
+        ctx.fillStyle = '#2a1508';
+        ctx.fillRect(bx, by, barW, barH);
+
+        ctx.font      = 'bold 9px "Courier New"';
+        ctx.textAlign = 'center';
+
+        if (!tree.grown) {
+            const fill = tree.growth * barW;
+            if (fill > 0) {
+                ctx.fillStyle = '#2d6b20'; ctx.fillRect(bx, by, fill, barH);
+                if (fill > 3) { ctx.fillStyle = '#3a8828'; ctx.fillRect(bx, by, fill - 2, barH - 3); }
+            }
+            ctx.fillStyle = '#6a5030';
+            ctx.fillText('GROWING', cx, by + barH + 14);
+        } else {
+            const fill = (tree.clicks / clicksNeeded) * barW;
+            if (fill > 0) {
+                ctx.fillStyle = '#7B4A1E'; ctx.fillRect(bx, by, fill, barH);
+                if (fill > 3) { ctx.fillStyle = '#A0602A'; ctx.fillRect(bx, by, fill - 2, barH - 3); }
+            }
+            ctx.fillStyle = '#c8a450';
+            ctx.fillText(`${tree.clicks}/${clicksNeeded}`, cx, by + barH + 14);
+
+            // Pulse arrow above tree
+            const art  = TREE_ART[getStage(tree.growth)];
+            const topY = GROUND - art.length * P - 6;
+            ctx.globalAlpha = 0.6 + 0.4 * Math.sin(ts / 350);
+            ctx.fillStyle   = '#6DC040';
+            ctx.font        = 'bold 11px "Courier New"';
+            ctx.fillText('▼', cx, topY);
+            ctx.globalAlpha = 1;
+        }
+    }
+
+    document.getElementById('woodCount').textContent = game.wood;
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  UPGRADE PANEL (DOM)
+// ═══════════════════════════════════════════════════════════════
+function buildCard(i) {
+    const u     = UPGRADES[i];
+    const atMax = u.level >= u.maxLevel;
+    const cost  = atMax ? 0 : u.cost();
+    const pct   = (u.level / u.maxLevel * 100).toFixed(1);
+    const lines = u.effectText().split('\n');
+    const el    = document.getElementById(`upg-${i}`);
+
+    el.innerHTML = `
+        <div class="upg-name">${u.name}</div>
+        <div class="upg-effect">${lines[0]}${lines[1] ? `<br><span class="upg-next">${lines[1]}</span>` : ''}</div>
+        <div class="upg-lvl-row">
+            <div class="upg-lvlbar-bg">
+                <div class="upg-lvlbar-fill" style="width:${pct}%"></div>
+            </div>
+            <div class="upg-lvl-text">${atMax ? 'MAX' : `${u.level}/${u.maxLevel}`}</div>
+        </div>
+        <div class="upg-cost-row" id="upg-cost-${i}">
+            ${atMax ? '— MAXED —' : `▶ ${cost} WOOD`}
+        </div>`;
+}
+
+function buildPanel() {
+    for (let i = 0; i < UPGRADES.length; i++) {
+        const el = document.getElementById(`upg-${i}`);
+        el.addEventListener('click', () => buyUpgrade(i));
+        buildCard(i);
+    }
+    syncPanel();
+}
+
+function syncPanel() {
+    for (let i = 0; i < UPGRADES.length; i++) {
+        const u      = UPGRADES[i];
+        const atMax  = u.level >= u.maxLevel;
+        const cost   = atMax ? 0 : u.cost();
+        const afford = !atMax && game.wood >= cost;
+        const el     = document.getElementById(`upg-${i}`);
+
+        el.className = 'upg-card ' + (atMax ? 'maxed' : afford ? 'affordable' : 'broke');
+
+        const costEl = document.getElementById(`upg-cost-${i}`);
+        if (costEl && !atMax) costEl.textContent = `▶ ${cost} WOOD`;
+    }
+}
+
+function buyUpgrade(idx) {
+    const u = UPGRADES[idx];
+    if (u.level >= u.maxLevel) return;
+    const cost = u.cost();
+    if (game.wood < cost) return;
+
+    game.wood -= cost;
+    u.level++;
+
+    if (u.id === 'trees') {
+        game.trees.push(makeTree());
+        spawnFloat(W / 2, GROUND * 0.15, '✦ NEW TREE PLANTED ✦', '#6DC040');
+    }
+
+    for (let i = 0; i < UPGRADES.length; i++) buildCard(i);
+    syncPanel();
+    document.getElementById('woodCount').textContent = game.wood;
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  GAME LOOP
+// ═══════════════════════════════════════════════════════════════
+let lastTs = 0;
+
+function loop(ts) {
+    const dt = lastTs ? ts - lastTs : 0;
+    lastTs = ts;
+
+    const growTime     = getGrowTime();
+    const centers      = treeCenters();
+
+    for (let i = 0; i < game.trees.length; i++) {
+        const tree = game.trees[i];
+        const cx   = centers[i];
+
+        if (!tree.grown) {
+            tree.growth = Math.min(1, tree.growth + dt / growTime);
+            if (tree.growth >= 1 && !tree.readyPing) {
+                tree.grown     = true;
+                tree.readyPing = true;
+                spawnFloat(cx, GROUND - TREE_ART[3].length * P - 20, '✦ READY ✦', '#6DC040');
+            }
+        }
+
+        if (tree.shakeTimer > 0) {
+            tree.shakeTimer -= dt;
+            tree.shakeX = Math.sin(tree.shakeTimer / 25) * 4;
+        }
+    }
+
+    for (let i = particles.length - 1; i >= 0; i--) {
+        const p = particles[i];
+        p.x += p.vx; p.y += p.vy; p.vy += 0.35;
+        p.life -= dt / 550;
+        if (p.life <= 0) particles.splice(i, 1);
+    }
+
+    for (let i = floats.length - 1; i >= 0; i--) {
+        const f = floats[i];
+        f.y    -= dt * 0.035;
+        f.life -= dt / 1600;
+        if (f.life <= 0) floats.splice(i, 1);
+    }
+
+    ctx.clearRect(0, 0, W, H);
+    drawBackground(ts);
+    drawAllTrees(ts);
+    drawParticles();
+    drawFloats();
+    drawUI(ts);
+
+    syncPanel();
+    requestAnimationFrame(loop);
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  INPUT
+// ═══════════════════════════════════════════════════════════════
+function handleTap(clientX, clientY) {
+    const rect = canvas.getBoundingClientRect();
+    const mx   = (clientX - rect.left) * (W / rect.width);
+    const my   = (clientY - rect.top)  * (H / rect.height);
+    const ctrs = treeCenters();
+
+    for (let i = 0; i < game.trees.length; i++) {
+        const tree = game.trees[i];
+        const cx   = ctrs[i];
+        if (!tree.grown || !hitTest(mx, my, cx, tree)) continue;
+
+        tree.clicks++;
+        tree.shakeTimer = 280;
+        spawnChips(mx, my);
+
+        if (tree.clicks >= getClicksNeeded()) {
+            game.wood++;
+            spawnFloat(cx, GROUND - TREE_ART[3].length * P - 20, '+1 WOOD', '#c8a450');
+            tree.clicks     = 0;
+            tree.growth     = 0;
+            tree.grown      = false;
+            tree.readyPing  = false;
+            tree.shakeTimer = 0;
+        }
+        break;
+    }
+}
+
+canvas.addEventListener('click', (e) => handleTap(e.clientX, e.clientY));
+
+canvas.addEventListener('touchstart', (e) => {
+    e.preventDefault();
+    const t = e.changedTouches[0];
+    handleTap(t.clientX, t.clientY);
+}, { passive: false });
+
+canvas.addEventListener('mousemove', (e) => {
+    const rect = canvas.getBoundingClientRect();
+    const mx   = (e.clientX - rect.left) * (W / rect.width);
+    const my   = (e.clientY - rect.top)  * (H / rect.height);
+    const ctrs = treeCenters();
+    const hover = game.trees.some((tree, i) => tree.grown && hitTest(mx, my, ctrs[i], tree));
+    canvas.style.cursor = hover ? 'pointer' : 'default';
+});
+
+// ═══════════════════════════════════════════════════════════════
+//  START
+// ═══════════════════════════════════════════════════════════════
+buildPanel();
+
+// Resize once layout is computed, then watch for changes
+const ro = new ResizeObserver(() => resizeCanvas());
+ro.observe(canvas);
+
+// Initial resize after a tick (layout must settle first)
+requestAnimationFrame(() => {
+    resizeCanvas();
+    requestAnimationFrame(loop);
+});
+</script>
+</body>
+</html>
+
             font-family: 'Courier New', Courier, monospace;
             user-select: none;<!DOCTYPE html>
 <html lang="en">
