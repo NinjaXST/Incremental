@@ -220,67 +220,67 @@ function resizeCanvas() {
 }
 
 // ═══════════════════════════════════════════════════════════════
-//  PIXEL ART TREES  —  Deciduous (round canopy, visible branches)
+//  PIXEL ART TREES  —  Deciduous oak, based on reference growth series
 // ═══════════════════════════════════════════════════════════════
-// ' '=air  T=trunk  K=dark bark  B=branch peeking through leaves
-// H=leaf highlight  L=leaf light  M=leaf mid  D=leaf deep shadow
+// ' '=air  T=trunk  K=dark bark/root
+// H=leaf highlight  L=leaf light  M=leaf mid  D=leaf shadow  B=branch spot
 // All strings within a stage must be the same length.
 const TREE_ART = [
-    // 0 – Sapling  (5 wide, 4 tall)
+    // 0 – Seed / tiny sprout  (5 wide, 4 tall)
+    // Reference stages 1–2: just a seed bump then a two-leaf sprout
     ['  H  ',
      ' LHL ',
      '  T  ',
      ' KTK '],
 
-    // 1 – Sprout  (7 wide, 8 tall)
-    ['   H   ',
-     '  LHL  ',
-     ' LBMBL ',
+    // 1 – Small bush  (7 wide, 6 tall)
+    // Reference stage 3: round low bush, barely any trunk visible
+    ['  HLH  ',
+     ' HLMLH ',
+     'HLMMMLH',
      'LMMMMML',
      ' DDDDD ',
-     '  KTK  ',
-     '  KTK  ',
-     ' KKTKK '],
+     '  KTK  '],
 
-    // 2 – Young tree  (9 wide, 11 tall)
+    // 2 – Young tree  (9 wide, 10 tall)
+    // Reference stages 4–5: clear round canopy, trunk visible, small root flare
     ['    H    ',
-     '   LHL   ',
-     '  LHLHL  ',
-     ' LBMMMBL ',
+     '  HLHLH  ',
+     ' HLMMMHL ',
+     'HLMMBMMHL',
      'LMMMMMMML',
+     'LMMMBMMML',
      ' DMMMMMD ',
      '  DDDDD  ',
      '   KTK   ',
-     '  KKTKKK ',
-     ' KKKTKKK ',
-     'KKKKTKKKK'],
+     '  KKTKK  '],
 
-    // 3 – Full tree  (13 wide, 13 tall)
-    // Dome canopy: bright highlights on top, branch browns through mid,
-    // shadow pooling at the base. Wide rooted trunk beneath.
-    ['      H      ',   // crown tip
-     '    HLHLH    ',   // bumpy bright top
-     '   HLMMLHH   ',   // upper canopy spreading
-     '  HLMMMMLHH  ',   // wider, still catching light
-     ' HLMBMMMBMLH ',   // branches visible mid-canopy
-     'HLMMMMMMMMMLH',   // widest row, full light wrap
-     'LMMMBMMBMMMML',   // branches deeper in canopy
-     'LMMMDDDDDMMML',   // shadow pooling inside
-     ' DMDDDDDDDMD ',   // deep shadow, canopy base
-     '  DDDDDDDDD  ',   // shadow closes bottom
-     '     TTT     ',   // trunk
-     '    KTTTK    ',   // trunk widens
-     '   KKKTKKKK  '],  // root spread
+    // 3 – Full grown tree  (13 wide, 13 tall)
+    // Reference stage 6: wide irregular canopy, branch spots throughout,
+    // shadow pooling at base, trunk widens into visible spread roots.
+    ['      H      ',
+     '    HLHLH    ',
+     '   HLMMLHH   ',
+     '  HLMMMMLHH  ',
+     ' HLMMBMMBMLH ',
+     'HLMMMMMMMMMHL',
+     'LMMMMBMMMMMML',
+     'LMMMMMMMMMMML',
+     ' DMMMMMMMMMD ',
+     '  DDDDDDDDD  ',
+     '     KTK     ',
+     '    KTTTK    ',
+     '  KKKTTTKKK  '],
 ];
 
 const PALETTE = {
     ' ': null,
-    T: '#8C5C28',   // trunk bark
+    T: '#8C5C28',   // trunk bark warm brown
     K: '#3E1E08',   // dark bark / root shadow
-    B: '#7A4820',   // branch brown peeking through leaves
-    H: '#90C840',   // leaf bright highlight
-    L: '#58A028',   // leaf light green
-    M: '#2E6814',   // leaf mid green
+    B: '#6A3A10',   // branch spot visible through leaves
+    H: '#8ED040',   // leaf bright highlight
+    L: '#52A022',   // leaf light green
+    M: '#2A6810',   // leaf mid green
     D: '#144008',   // leaf deep shadow
 };
 
