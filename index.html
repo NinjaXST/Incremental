@@ -1333,7 +1333,8 @@ function harvestWheat(plotIdx) {
     if (plot.swipeCount < getSwipesNeeded()) return;
     game.food += WHEAT_FOOD_YIELD;
     const cx = getPlotLayout()[plotIdx]?.cx ?? W / 2;
-    spawnFloat(cx, Math.round(H * 0.35), `+${WHEAT_FOOD_YIELD} FOOD`, '#E8B020', 52);
+    const floatSize = Math.max(14, Math.round(52 / game.farm.plots.length));
+    spawnFloat(cx, Math.round(H * 0.35), `+${WHEAT_FOOD_YIELD} FOOD`, '#E8B020', floatSize);
     plot.growth    = 0;
     plot.grown     = false;
     plot.readyPing = false;
@@ -1804,7 +1805,16 @@ function startGame() {
     });
 }
 
+let devMaxUsed = false;
+
 function devMaxAll() {
+    if (devMaxUsed) {
+        game.wood += 10000;
+        game.food += 10000;
+        updateHUD();
+        return;
+    }
+    devMaxUsed = true;
     UPGRADES.forEach((u, i) => {
         if (i === 6) return; // skip Selective Breeding
         if (i >= 8) return;  // skip Farm tab upgrades
@@ -1821,6 +1831,9 @@ function devMaxAll() {
     updateHUD();
     matchFarmTabHeight();
     saveGame();
+
+    const btn = document.getElementById('dev-max-btn');
+    btn.textContent = '⚠ DEV: +10000 WOOD & FOOD';
 }
 
 function showTitleScreen() {
