@@ -797,7 +797,7 @@ function makePlot() {
 
 function makeMine() {
     return {
-        rock: { clicks: 0, shakeTimer: 0, shakeX: 0 },
+        rock: { clicks: 0, shakeTimer: 0, shakeX: 0, respawnTimer: 0 },
         cart: { stones: 0, state: 'idle', travelX: 0, timer: 0, transportStones: 0 }
     };
 }
@@ -1607,7 +1607,7 @@ function drawFarmScene(ts) {
 // ═══════════════════════════════════════════════════════════════
 //  MINE MECHANICS
 // ═══════════════════════════════════════════════════════════════
-const MINE_ROCK_CLICKS = 10;
+const MINE_ROCK_CLICKS = 20;
 const MINE_CART_MAX    = 5;
 
 function getMineRockBounds() {
@@ -1632,6 +1632,7 @@ function sendCart() {
 
 function mineRockTap(mx, my) {
     if (game.mine.cart.state !== 'idle') return;
+    if (game.mine.rock.respawnTimer > 0) return;
     // Check SEND CART button first
     if (mineSendCartBtn) {
         const b2 = mineSendCartBtn;
@@ -1653,6 +1654,7 @@ function mineRockTap(mx, my) {
 
     if (rock.clicks >= MINE_ROCK_CLICKS) {
         rock.clicks = 0;
+        rock.respawnTimer = 5000;
         if (game.mine.cart.stones < MINE_CART_MAX) {
             game.mine.cart.stones++;
             spawnFloat(b.cx, b.y - 28, '+1 STONE', '#a0b8c8', 18);
@@ -1884,6 +1886,19 @@ function drawMineScene(ts) {
     {
         const b    = getMineRockBounds();
         const rock = game.mine.rock;
+
+        if (rock.respawnTimer > 0) {
+            // Rock is destroyed — show respawn countdown
+            const secs  = Math.ceil(rock.respawnTimer / 1000);
+            const fSz   = Math.max(12, Math.round(H * 0.032));
+            ctx.font      = `bold ${fSz}px 'Courier New'`;
+            ctx.textAlign = 'center';
+            ctx.fillStyle = '#5a4e30';
+            ctx.fillText('NEW ROCK IN', b.cx, b.cy - Math.round(fSz * 0.5));
+            ctx.fillStyle = '#c8a450';
+            ctx.fillText(`${secs}s`, b.cx, b.cy + Math.round(fSz * 0.9));
+        } else {
+
         const sx   = rock.shakeTimer > 0 ? rock.shakeX : 0;
         const prog = rock.clicks / MINE_ROCK_CLICKS;
 
@@ -1983,6 +1998,8 @@ function drawMineScene(ts) {
         for (let p = 0; p < MINE_ROCK_CLICKS; p++) {
             ctx.strokeRect(pipX0 + p * (pipSz + pipGap), pipY0, pipSz, pipSz);
         }
+
+        } // end else (rock present)
     }
 
     drawFloats();
@@ -2082,10 +2099,13 @@ function loop(ts) {
         if (f.life <= 0) floats.splice(i, 1);
     }
 
-    // Mine rock shake
+    // Mine rock shake / respawn
     if (game.mine.rock.shakeTimer > 0) {
         game.mine.rock.shakeTimer -= dt;
         game.mine.rock.shakeX = Math.sin(game.mine.rock.shakeTimer * 0.4) * 3;
+    }
+    if (game.mine.rock.respawnTimer > 0) {
+        game.mine.rock.respawnTimer = Math.max(0, game.mine.rock.respawnTimer - dt);
     }
 
     // Mine cart travel / return timer
@@ -2254,6 +2274,7 @@ function saveGame() {
             farm: { plots: game.farm.plots.map(p => ({ growth: p.growth, grown: p.grown })) },
             mine: {
                 rockClicks: game.mine.rock.clicks,
+                rockRespawnTimer: game.mine.rock.respawnTimer,
                 cartStones: game.mine.cart.stones,
                 cartState: game.mine.cart.state,
                 cartTimer: game.mine.cart.timer,
@@ -2312,6 +2333,7 @@ function loadGame() {
         // Restore mine state
         if (data.mine) {
             game.mine.rock.clicks          = typeof data.mine.rockClicks          === 'number' ? data.mine.rockClicks          : 0;
+            game.mine.rock.respawnTimer    = typeof data.mine.rockRespawnTimer    === 'number' ? data.mine.rockRespawnTimer    : 0;
             game.mine.cart.stones          = typeof data.mine.cartStones          === 'number' ? data.mine.cartStones          : 0;
             game.mine.cart.state           = ['idle','leaving','away'].includes(data.mine.cartState) ? data.mine.cartState : 'idle';
             game.mine.cart.timer           = typeof data.mine.cartTimer           === 'number' ? data.mine.cartTimer           : 0;
