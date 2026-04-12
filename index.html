@@ -61,6 +61,9 @@
         #food-hud { color: #c8a450; }
         #food-hud.hidden { display: none; }
         #food-hud span { color: #e8d090; }
+        #stone-hud { color: #c8a450; }
+        #stone-hud.hidden { display: none; }
+        #stone-hud span { color: #e8d090; }
 
         /* ── Tab bar ── */
         #tab-bar {
@@ -204,6 +207,13 @@
             flex-direction: column;
         }
         #tab-farm.active { display: flex; }
+
+        /* ── Mine tab ── */
+        #tab-mine {
+            display: none;
+            flex-direction: column;
+        }
+        #tab-mine.active { display: flex; }
 
         /* ── Save indicator ── */
         #save-indicator {
@@ -372,11 +382,13 @@
         <div id="hud">
             <div>Wood: <span id="woodCount">0</span></div>
             <div id="food-hud" class="hidden">Food: <span id="foodCount">0</span></div>
+            <div id="stone-hud" class="hidden">Stone: <span id="stoneCount">0</span></div>
         </div>
         <div id="upgrade-panel">
             <div id="tab-bar">
                 <button class="tab-btn active" id="tab-wood-btn">FOREST</button>
                 <button class="tab-btn" id="tab-farm-btn" style="display:none">FARM</button>
+                <button class="tab-btn" id="tab-mine-btn" style="display:none">MINE</button>
             </div>
             <div id="tab-wood">
                 <button id="dev-max-btn" onclick="devMaxAll()" style="display:block;width:100%;padding:4px 0;background:#1a0a0a;color:#ff4040;font-family:'Courier New',monospace;font-size:11px;font-weight:900;letter-spacing:2px;border:1px dashed #ff4040;cursor:pointer;">⚠ DEV: MAX ALL (FOREST)</button>
@@ -398,11 +410,25 @@
                     <div id="upg-8" class="upg-card"></div>
                     <div id="upg-9" class="upg-card"></div>
                     <div id="upg-12" class="upg-card"></div>
-                    <div id="upg-11" class="upg-card"></div>
+                    <div id="upg-13" class="upg-card"></div>
                 </div>
                 <div class="cards-row">
                     <div id="upg-10" class="upg-card"></div>
-                    <div id="upg-13" class="upg-card"></div>
+                    <div id="upg-11" class="upg-card"></div>
+                    <div id="upg-14" class="upg-card"></div>
+                    <div class="upg-card maxed"><div class="upg-name">—</div><div class="upg-cost-row">LOCKED</div></div>
+                </div>
+            </div>
+            <div id="tab-mine">
+                <div class="cards-row">
+                    <div class="upg-card maxed"><div class="upg-name">—</div><div class="upg-cost-row">LOCKED</div></div>
+                    <div class="upg-card maxed"><div class="upg-name">—</div><div class="upg-cost-row">LOCKED</div></div>
+                    <div class="upg-card maxed"><div class="upg-name">—</div><div class="upg-cost-row">LOCKED</div></div>
+                    <div class="upg-card maxed"><div class="upg-name">—</div><div class="upg-cost-row">LOCKED</div></div>
+                </div>
+                <div class="cards-row">
+                    <div class="upg-card maxed"><div class="upg-name">—</div><div class="upg-cost-row">LOCKED</div></div>
+                    <div class="upg-card maxed"><div class="upg-name">—</div><div class="upg-cost-row">LOCKED</div></div>
                     <div class="upg-card maxed"><div class="upg-name">—</div><div class="upg-cost-row">LOCKED</div></div>
                     <div class="upg-card maxed"><div class="upg-name">—</div><div class="upg-cost-row">LOCKED</div></div>
                 </div>
@@ -627,13 +653,13 @@ const UPGRADES = [
     {
         id: 'buckets', name: 'HARVEST BUCKETS', maxLevel: 10, level: 0,
         currency: 'wood',
-        costBase: 300, costMult: 1.8,
+        costBase: 100, costMult: 1.8,
         cost() { return Math.ceil(this.costBase * Math.pow(this.costMult, this.level)); },
-        multiplier() { return Math.pow(1.25, this.level); },
+        multiplier() { return Math.pow(1.1, this.level); },
         effectText() {
             const cur = this.multiplier().toFixed(2);
             if (this.level >= this.maxLevel) return `Food from fruits\n×${cur}`;
-            const nxt = Math.pow(1.25, this.level + 1).toFixed(2);
+            const nxt = Math.pow(1.1, this.level + 1).toFixed(2);
             return `Food from fruits\n×${cur} → ×${nxt}`;
         },
     },
@@ -650,23 +676,23 @@ const UPGRADES = [
     },
     // 8 – Sharp Scythe (farm upgrade)
     {
-        id: 'scythe', name: 'SHARP SCYTHE', maxLevel: 4, level: 0,
+        id: 'scythe', name: 'SHARP SCYTHE', maxLevel: 5, level: 0,
         currency: 'mixed',
-        get woodCost() { return Math.ceil(200 * Math.pow(2, this.level)); },
-        get foodCost() { return Math.ceil(25  * Math.pow(2, this.level)); },
+        get woodCost() { return Math.ceil(400 * Math.pow(2, this.level)); },
+        get foodCost() { return Math.ceil(50  * Math.pow(2, this.level)); },
         cost() { return this.woodCost; },
         effectText() {
             const swipes = getSwipesNeeded();
-            if (this.level >= this.maxLevel) return `Harvest in\n1 swipe`;
+            if (this.level >= this.maxLevel) return `Harvest in\n3 swipes`;
             return `Harvest in\n${swipes} swipe${swipes !== 1 ? 's' : ''}`;
         },
     },
     // 9 – Fertilizer (farm upgrade)
     {
-        id: 'fertilizer', name: 'FERTILIZER', maxLevel: 15, level: 0,
+        id: 'fertilizer', name: 'FERTILIZER', maxLevel: 10, level: 0,
         currency: 'mixed',
-        get woodCost() { return Math.ceil(400 * Math.pow(1.618, this.level)); },
-        get foodCost() { return Math.ceil(50  * Math.pow(1.618, this.level)); },
+        get woodCost() { return Math.ceil(800 * Math.pow(1.618, this.level)); },
+        get foodCost() { return Math.ceil(100 * Math.pow(1.618, this.level)); },
         cost() { return this.woodCost; },
         effectText() {
             const secs = (getWheatGrowTime() / 1000).toFixed(1);
@@ -678,13 +704,13 @@ const UPGRADES = [
     {
         id: 'croprot', name: 'CROP ROTATION', maxLevel: 10, level: 0,
         currency: 'mixed',
-        get woodCost() { return Math.ceil(2000 * Math.pow(1.8, this.level)); },
-        get foodCost() { return Math.ceil(100  * Math.pow(1.8, this.level)); },
+        get woodCost() { return Math.ceil(4000 * Math.pow(1.8, this.level)); },
+        get foodCost() { return Math.ceil(500  * Math.pow(1.8, this.level)); },
         cost() { return this.woodCost; },
         effectText() {
-            const cur = Math.pow(2, this.level);
-            const nxt = Math.pow(2, this.level + 1);
-            if (this.level >= this.maxLevel) return `Food from Fruits\nx${Math.pow(2, this.maxLevel)}`;
+            const cur = Math.pow(1.5, this.level).toFixed(2);
+            const nxt = Math.pow(1.5, this.level + 1).toFixed(2);
+            if (this.level >= this.maxLevel) return `Food from Fruits\nx${Math.pow(1.5, this.maxLevel).toFixed(2)}`;
             return `Food from Fruits\nx${cur} → x${nxt}`;
         },
     },
@@ -692,8 +718,8 @@ const UPGRADES = [
     {
         id: 'newplot', name: 'NEW PLOT', maxLevel: 3, level: 0,
         currency: 'mixed',
-        get woodCost() { return Math.ceil(1000 * Math.pow(3, this.level)); },
-        get foodCost() { return Math.ceil(150  * Math.pow(3, this.level)); },
+        get woodCost() { return Math.ceil(6000 * Math.pow(3, this.level)); },
+        get foodCost() { return Math.ceil(800  * Math.pow(3, this.level)); },
         cost() { return this.woodCost; },
         effectText() {
             const plots = 1 + this.level;
@@ -705,8 +731,8 @@ const UPGRADES = [
     {
         id: 'pureline', name: 'PURE LINE SELECTION', maxLevel: 10, level: 0,
         currency: 'mixed',
-        get woodCost() { return Math.ceil(500 * Math.pow(1.7, this.level)); },
-        get foodCost() { return Math.ceil(100 * Math.pow(1.7, this.level)); },
+        get woodCost() { return Math.ceil(1200 * Math.pow(1.7, this.level)); },
+        get foodCost() { return Math.ceil(200 * Math.pow(1.7, this.level)); },
         cost() { return this.woodCost; },
         multiplier() { return Math.pow(1.5, this.level); },
         effectText() {
@@ -718,10 +744,10 @@ const UPGRADES = [
     },
     // 13 – Leaf Litter (farm upgrade)
     {
-        id: 'leaflitter', name: 'LEAF LITTER', maxLevel: 10, level: 0,
+        id: 'leaflitter', name: 'INCREASE BIODIVERSITY', maxLevel: 10, level: 0,
         currency: 'mixed',
-        get woodCost() { return Math.ceil(800 * Math.pow(1.7, this.level)); },
-        get foodCost() { return Math.ceil(150 * Math.pow(1.7, this.level)); },
+        get woodCost() { return Math.ceil(1200 * Math.pow(1.7, this.level)); },
+        get foodCost() { return Math.ceil(200 * Math.pow(1.7, this.level)); },
         cost() { return this.woodCost; },
         multiplier() { return Math.pow(1.5, this.level); },
         effectText() {
@@ -729,6 +755,17 @@ const UPGRADES = [
             if (this.level >= this.maxLevel) return `Wood from Trees\n×${cur}`;
             const nxt = Math.pow(1.5, this.level + 1).toFixed(2);
             return `Wood from Trees\n×${cur} → ×${nxt}`;
+        },
+    },
+    // 14 – Mine Shafts (farm upgrade, unlocks Mine tab)
+    {
+        id: 'mine', name: 'MINE SHAFTS', maxLevel: 1, level: 0,
+        currency: 'wood',
+        costBase: 0, costMult: 1,
+        cost() { return 0; },
+        effectText() {
+            if (this.level >= this.maxLevel) return 'Mine: Open';
+            return 'Unlock\nMine tab';
         },
     },
 ];
@@ -740,8 +777,8 @@ function getFoodMultiplier()    { return UPGRADES[6].multiplier(); }
 function getFruitChance()       { return UPGRADES[4].fruitChance(); }
 function getLodgeCPS()          { return UPGRADES[5].clicksPerSec(); }
 function getSwipesNeeded()      { return WHEAT_SWIPES_NEEDED - UPGRADES[8].level; }
-function getWheatGrowTime()     { return WHEAT_GROW_TIME - UPGRADES[9].level * (5000 / 15); }
-function getCropRotMult()       { return Math.pow(2, UPGRADES[10].level); }
+function getWheatGrowTime()     { return WHEAT_GROW_TIME - UPGRADES[9].level * 500; }
+function getCropRotMult()       { return Math.pow(1.5, UPGRADES[10].level); }
 function getPureLineMult()      { return UPGRADES[12].multiplier(); }
 function getLeafLitterMult()   { return UPGRADES[13].multiplier(); }
 function formatNum(n)        { return Number.isInteger(n) ? n : n.toFixed(2); }
@@ -758,11 +795,19 @@ function makePlot() {
     return { growth: 0, grown: false, readyPing: false, swipeCount: 0 };
 }
 
+function makeMine() {
+    return {
+        rock: { clicks: 0, shakeTimer: 0, shakeX: 0 },
+        cart: { stones: 0, state: 'idle', travelX: 0, timer: 0, transportStones: 0 }
+    };
+}
+
 const game = {
-    wood: 0, food: 0,
+    wood: 0, food: 0, stone: 0,
     trees: [makeTree()],
     firstChopDone: false, lodgeAccum: 0,
     farm: { plots: [makePlot()] },
+    mine: makeMine(),
 };
 
 // ═══════════════════════════════════════════════════════════════
@@ -1001,36 +1046,59 @@ function drawCabin(ts) {
     const wallTopY    = baseY - cabinH;
     const logH        = Math.max(3, Math.round(cabinH / 8));
 
-    // Log walls
+    // Log walls — fill solid base first so no sky gaps
+    ctx.fillStyle = '#4a2808';
+    ctx.fillRect(cabinStartX, wallTopY, cabinW, cabinH);
     const logColors = ['#5a3212', '#6a3c1a', '#4a2808', '#623618'];
     for (let i = 0; i < Math.ceil(cabinH / logH); i++) {
         ctx.fillStyle = logColors[i % logColors.length];
-        ctx.fillRect(cabinStartX, wallTopY + i * logH, cabinW, Math.max(1, logH - 1));
+        ctx.fillRect(cabinStartX, wallTopY + i * logH, cabinW, logH);
+    }
+    // Dark seam lines between logs
+    ctx.fillStyle = '#2a1408';
+    for (let i = 1; i <= Math.ceil(cabinH / logH); i++) {
+        ctx.fillRect(cabinStartX, wallTopY + i * logH - 1, cabinW, 1);
     }
 
-    // Roof
+    // Roof peak coordinates (used for chimney attachment)
+    const peakX  = cabinStartX + cabinW / 2;
+    const peakY  = wallTopY - Math.round(cabinW * 0.35);
+    const roofR  = { x: cabinStartX + cabinW + 4, y: wallTopY + 2 };
+
+    // Chimney (drawn BEFORE roof so roof overlaps base)
+    const chimneyX = cabinStartX + Math.round(cabinW * 0.68);
+    const chimneyW = 9;
+    const chimneyH = Math.round(cabinW * 0.14);
+    // Interpolate roof slope y at chimney x
+    const t = (chimneyX - peakX) / (roofR.x - peakX);
+    const roofYAtChimney = Math.round(peakY + t * (roofR.y - peakY));
+    const chimneyTop = roofYAtChimney - chimneyH;
+    // Extend chimney bottom past the roof eave so it overlaps the full triangle
+    ctx.fillStyle = '#2a1808';
+    const chimneyBottom = chimneyTop + Math.round((wallTopY + 4 - chimneyTop) * 0.9);
+    ctx.fillRect(chimneyX, chimneyTop, chimneyW, chimneyBottom - chimneyTop);
+    // Chimney cap
+    ctx.fillStyle = '#1a1008';
+    ctx.fillRect(chimneyX - 1, chimneyTop, chimneyW + 2, 3);
+
+    // Roof (drawn after chimney so it covers chimney base)
     ctx.fillStyle = '#2a1608';
     ctx.beginPath();
     ctx.moveTo(cabinStartX - 4, wallTopY + 2);
-    ctx.lineTo(cabinStartX + cabinW / 2, wallTopY - Math.round(cabinW * 0.35));
+    ctx.lineTo(peakX, peakY);
     ctx.lineTo(cabinStartX + cabinW + 4, wallTopY + 2);
     ctx.closePath();
     ctx.fill();
     // Roof ridge detail
     ctx.fillStyle = '#1a0e05';
-    ctx.fillRect(cabinStartX + Math.round(cabinW / 2) - 2, wallTopY - Math.round(cabinW * 0.35), 4, Math.round(cabinW * 0.1));
+    ctx.fillRect(Math.round(peakX) - 2, peakY, 4, Math.round(cabinW * 0.1));
 
-    // Chimney
-    const chimneyX = cabinStartX + Math.round(cabinW * 0.68);
-    const chimneyH = Math.round(cabinW * 0.28);
-    ctx.fillStyle = '#2a1808';
-    ctx.fillRect(chimneyX, wallTopY - Math.round(cabinW * 0.35) - chimneyH + 10, 9, chimneyH);
     // Smoke puff
     const smokeAlpha = 0.25 + 0.15 * Math.sin(ts / 700);
     ctx.globalAlpha = smokeAlpha;
     ctx.fillStyle = '#b0a898';
     ctx.beginPath();
-    ctx.arc(chimneyX + 5, wallTopY - Math.round(cabinW * 0.35) - chimneyH + 6, 5, 0, Math.PI * 2);
+    ctx.arc(chimneyX + chimneyW / 2, chimneyTop - 4, 5, 0, Math.PI * 2);
     ctx.fill();
     ctx.globalAlpha = 1;
 
@@ -1049,12 +1117,8 @@ function drawCabin(ts) {
     const winSize = Math.round(cabinW * 0.18);
     const winX    = cabinStartX + Math.round(cabinW * 0.08);
     const winY    = wallTopY + Math.round(cabinH * 0.22);
-    // Warm glow flicker
-    const glow = 0.4 + 0.25 * Math.sin(ts / 900);
-    ctx.globalAlpha = glow;
     ctx.fillStyle = '#d8901a';
     ctx.fillRect(winX, winY, winSize, winSize);
-    ctx.globalAlpha = 1;
     // Window pane cross
     ctx.fillStyle = '#2a1508';
     ctx.fillRect(winX, winY + Math.round(winSize / 2) - 1, winSize, 2);
@@ -1187,6 +1251,10 @@ function updateHUD() {
         document.getElementById('food-hud').classList.remove('hidden');
         document.getElementById('foodCount').textContent = formatNum(game.food);
     }
+    if (game.stone > 0 || UPGRADES[14].level > 0) {
+        document.getElementById('stone-hud').classList.remove('hidden');
+        document.getElementById('stoneCount').textContent = formatNum(game.stone);
+    }
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -1232,6 +1300,7 @@ function buildPanel() {
     // Wire tab buttons
     document.getElementById('tab-wood-btn').addEventListener('click', () => switchTab('wood'));
     document.getElementById('tab-farm-btn').addEventListener('click', () => switchTab('farm'));
+    document.getElementById('tab-mine-btn').addEventListener('click', () => switchTab('mine'));
     syncPanel();
 }
 
@@ -1300,6 +1369,12 @@ function buyUpgrade(idx) {
     if (u.id === 'newplot') {
         game.farm.plots.push(makePlot());
     }
+    if (u.id === 'mine') {
+        const mineBtn = document.getElementById('tab-mine-btn');
+        mineBtn.style.display = '';
+        mineBtn.classList.add('new');
+        spawnFloat(W / 2, GROUND * 0.15, '✦ MINE UNLOCKED ✦', '#a0c8e0');
+    }
 
     for (let i = 0; i < UPGRADES.length; i++) buildCard(i);
     syncPanel();
@@ -1313,13 +1388,17 @@ let activeTab = 'wood';
 
 function switchTab(tab) {
     activeTab = tab;
-    floats.length = 0; // clear any pending floats from the other tab
+    floats.length = 0;
     document.getElementById('tab-wood').classList.toggle('hidden', tab !== 'wood');
     document.getElementById('tab-farm').classList.toggle('active', tab === 'farm');
+    document.getElementById('tab-mine').classList.toggle('active', tab === 'mine');
     document.getElementById('tab-wood-btn').classList.toggle('active', tab === 'wood');
     const farmBtn = document.getElementById('tab-farm-btn');
     farmBtn.classList.toggle('active', tab === 'farm');
     if (tab === 'farm') farmBtn.classList.remove('new');
+    const mineBtn = document.getElementById('tab-mine-btn');
+    mineBtn.classList.toggle('active', tab === 'mine');
+    if (tab === 'mine') mineBtn.classList.remove('new');
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -1526,6 +1605,390 @@ function drawFarmScene(ts) {
 }
 
 // ═══════════════════════════════════════════════════════════════
+//  MINE MECHANICS
+// ═══════════════════════════════════════════════════════════════
+const MINE_ROCK_CLICKS = 10;
+const MINE_CART_MAX    = 5;
+
+function getMineRockBounds() {
+    const rW = Math.round(W * 0.40);
+    const rH = Math.round(H * 0.30);
+    const rX = Math.round(W / 2 - rW / 2);
+    const rY = H - rH - Math.round(H * 0.04);  // near bottom of canvas
+    return { x: rX, y: rY, w: rW, h: rH, cx: Math.round(W / 2), cy: Math.round(rY + rH / 2) };
+}
+
+let mineSendCartBtn = null;
+
+function sendCart() {
+    const cart = game.mine.cart;
+    if (cart.state !== 'idle' || cart.stones === 0) return;
+    cart.state = 'leaving';
+    cart.travelX = 0;
+    cart.transportStones = cart.stones;
+    cart.stones = 0;
+    saveGame();
+}
+
+function mineRockTap(mx, my) {
+    if (game.mine.cart.state !== 'idle') return;
+    // Check SEND CART button first
+    if (mineSendCartBtn) {
+        const b2 = mineSendCartBtn;
+        if (mx >= b2.x && mx <= b2.x + b2.w && my >= b2.y && my <= b2.y + b2.h) {
+            sendCart(); return;
+        }
+    }
+    const b = getMineRockBounds();
+    // Ellipse hit test
+    const dx = (mx - b.cx) / (b.w / 2);
+    const dy = (my - b.cy) / (b.h / 2);
+    if (dx * dx + dy * dy > 1) return;
+
+    const rock = game.mine.rock;
+    rock.clicks++;
+    rock.shakeTimer = 120;
+
+    spawnFloat(b.cx, b.y - 10, '⛏', '#c8a450', 22);
+
+    if (rock.clicks >= MINE_ROCK_CLICKS) {
+        rock.clicks = 0;
+        if (game.mine.cart.stones < MINE_CART_MAX) {
+            game.mine.cart.stones++;
+            spawnFloat(b.cx, b.y - 28, '+1 STONE', '#a0b8c8', 18);
+        } else {
+            spawnFloat(b.cx, b.y - 28, 'CART FULL!', '#e05050', 18);
+        }
+    }
+    saveGame();
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  MINE SCENE
+// ═══════════════════════════════════════════════════════════════
+function drawMineScene(ts) {
+    // ── Cave background ──
+    ctx.fillStyle = '#0d0b08';
+    ctx.fillRect(0, 0, W, H);
+
+    // Rocky ceiling
+    const ceilH = Math.round(H * 0.12);
+    ctx.fillStyle = '#2a2018';
+    ctx.fillRect(0, 0, W, ceilH);
+    // Ceiling jagged edge
+    ctx.fillStyle = '#1a1410';
+    for (let x = 0; x < W; x += Math.round(W / 18)) {
+        const jH = Math.round(ceilH * (0.5 + 0.5 * Math.sin(x * 0.07 + 1.2)));
+        ctx.fillRect(x, ceilH - jH, Math.round(W / 18) + 1, jH);
+    }
+
+    // Rocky floor
+    const floorY = Math.round(H * 0.72);
+    ctx.fillStyle = '#2a2018';
+    ctx.fillRect(0, floorY, W, H - floorY);
+    ctx.fillStyle = '#1a1410';
+    for (let x = 0; x < W; x += Math.round(W / 14)) {
+        const jH = Math.round(H * 0.04 * (0.5 + 0.5 * Math.sin(x * 0.11)));
+        ctx.fillRect(x, floorY, Math.round(W / 14) + 1, jH);
+    }
+
+    // ── Stone wall texture (left & right) ──
+    const wallW = Math.round(W * 0.08);
+    ctx.fillStyle = '#221a10';
+    ctx.fillRect(0, ceilH, wallW, floorY - ceilH);
+    ctx.fillRect(W - wallW, ceilH, wallW, floorY - ceilH);
+    // Stone blocks
+    ctx.fillStyle = '#2e2416';
+    for (let y = ceilH; y < floorY; y += Math.round(H * 0.1)) {
+        ctx.fillRect(0, y, wallW, 2);
+        ctx.fillRect(W - wallW, y, wallW, 2);
+    }
+
+    // ── Mine track ──
+    const trackY = floorY - Math.round(H * 0.05);
+    const tieW   = Math.round(W * 0.04);
+    const tieH   = Math.round(H * 0.025);
+    const tieGap = Math.round(W * 0.07);
+    ctx.fillStyle = '#5a3a18';
+    for (let x = wallW; x < W - wallW - tieW; x += tieGap) {
+        ctx.fillRect(x, trackY, tieW, tieH);
+    }
+    // Rails
+    ctx.fillStyle = '#707880';
+    ctx.fillRect(wallW, trackY + 3, W - wallW * 2, 3);
+    ctx.fillStyle = '#909aa0';
+    ctx.fillRect(wallW, trackY + 3, W - wallW * 2, 1);
+    ctx.fillStyle = '#707880';
+    ctx.fillRect(wallW, trackY + tieH - 4, W - wallW * 2, 3);
+    ctx.fillStyle = '#909aa0';
+    ctx.fillRect(wallW, trackY + tieH - 4, W - wallW * 2, 1);
+
+    // ── Torches ──
+    const torchPositions = [Math.round(W * 0.2), Math.round(W * 0.5), Math.round(W * 0.8)];
+    for (const tx of torchPositions) {
+        const torchY = Math.round(ceilH + H * 0.08);
+        // Glow
+        const glow = 0.06 + 0.04 * Math.sin(ts / 300 + tx);
+        const grad = ctx.createRadialGradient(tx, torchY, 0, tx, torchY, Math.round(W * 0.18));
+        grad.addColorStop(0, `rgba(255,160,40,${glow + 0.08})`);
+        grad.addColorStop(1, 'rgba(255,100,0,0)');
+        ctx.fillStyle = grad;
+        ctx.fillRect(tx - Math.round(W * 0.18), torchY - Math.round(H * 0.1), Math.round(W * 0.36), Math.round(H * 0.4));
+        // Torch stick
+        ctx.fillStyle = '#5a3010';
+        ctx.fillRect(tx - 2, torchY, 4, Math.round(H * 0.06));
+        // Flame
+        ctx.fillStyle = '#ff8020';
+        ctx.fillRect(tx - 3, torchY - Math.round(H * 0.04), 6, Math.round(H * 0.04));
+        ctx.fillStyle = '#ffcc40';
+        ctx.fillRect(tx - 1, torchY - Math.round(H * 0.05), 2, Math.round(H * 0.03));
+    }
+
+    // ── Depth shaft (vanishing point) ──
+    const vpX = Math.round(W / 2);
+    const vpY = Math.round(H * 0.42);
+    ctx.strokeStyle = '#3a2c18';
+    ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(wallW, ceilH); ctx.lineTo(vpX, vpY); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(W - wallW, ceilH); ctx.lineTo(vpX, vpY); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(wallW, floorY); ctx.lineTo(vpX, vpY); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(W - wallW, floorY); ctx.lineTo(vpX, vpY); ctx.stroke();
+
+    // ── Mine Cart ──
+    {
+        const wheelR   = Math.round(H * 0.034);
+        const cartHW   = Math.round(W * 0.11);
+        const cartBH   = Math.round(H * 0.10);
+        const cartHome = wallW + Math.round(W * 0.14);  // home center x
+        const cart     = game.mine.cart;
+        const cartCX   = cartHome + Math.round(cart.travelX);
+        const wheelCY  = trackY + tieH - 4 - wheelR;
+        const bodyTop  = wheelCY - wheelR - cartBH;
+        const bodyL    = cartCX - cartHW;
+        const bodyR    = cartCX + cartHW;
+
+        if (cart.state !== 'away') {
+            // Wheels
+            for (const wx of [cartCX - cartHW + wheelR + 2, cartCX + cartHW - wheelR - 2]) {
+                ctx.fillStyle = '#1e1a10';
+                ctx.beginPath(); ctx.arc(wx, wheelCY, wheelR, 0, Math.PI * 2); ctx.fill();
+                ctx.fillStyle = '#504838';
+                ctx.beginPath(); ctx.arc(wx, wheelCY, wheelR - 2, 0, Math.PI * 2); ctx.fill();
+                ctx.fillStyle = '#302820';
+                ctx.beginPath(); ctx.arc(wx, wheelCY, Math.round(wheelR * 0.45), 0, Math.PI * 2); ctx.fill();
+                ctx.fillStyle = '#686050';
+                ctx.beginPath(); ctx.arc(wx, wheelCY, 1, 0, Math.PI * 2); ctx.fill();
+            }
+
+            // Cart body
+            const slant = Math.round(cartBH * 0.12);
+            ctx.fillStyle = '#302818';
+            ctx.beginPath();
+            ctx.moveTo(bodyL,         bodyTop);
+            ctx.lineTo(bodyR,         bodyTop);
+            ctx.lineTo(bodyR - slant, wheelCY - wheelR);
+            ctx.lineTo(bodyL + slant, wheelCY - wheelR);
+            ctx.closePath(); ctx.fill();
+
+            ctx.fillStyle = '#1e1810';
+            ctx.beginPath();
+            ctx.moveTo(bodyL + 4,          bodyTop + 4);
+            ctx.lineTo(bodyR - 4,          bodyTop + 4);
+            ctx.lineTo(bodyR - slant - 2,  wheelCY - wheelR - 4);
+            ctx.lineTo(bodyL + slant + 2,  wheelCY - wheelR - 4);
+            ctx.closePath(); ctx.fill();
+
+            ctx.fillStyle = '#706050';
+            ctx.fillRect(bodyL, bodyTop,     cartHW * 2, 3);
+            ctx.fillStyle = '#504030';
+            ctx.fillRect(bodyL, bodyTop + 3, 3, cartBH - 6);
+            ctx.fillRect(bodyR - 3, bodyTop + 3, 3, cartBH - 6);
+
+            ctx.fillStyle = '#808878';
+            for (let rv = 0; rv < 3; rv++) {
+                const rvX = bodyL + Math.round(cartHW * 2 * (rv + 1) / 4);
+                ctx.fillRect(rvX - 1, bodyTop + 6, 2, 2);
+            }
+
+            // Stone slots
+            const stonesNow  = cart.stones;
+            const slotW      = Math.round((cartHW * 2 - 10) / MINE_CART_MAX);
+            const slotH      = Math.round(cartBH * 0.48);
+            const slotStartY = bodyTop + Math.round(cartBH * 0.28);
+            for (let s = 0; s < MINE_CART_MAX; s++) {
+                const slotX = bodyL + 5 + s * slotW;
+                if (s < stonesNow) {
+                    ctx.fillStyle = '#686058';
+                    ctx.fillRect(slotX, slotStartY, slotW - 2, slotH);
+                    ctx.fillStyle = '#888070';
+                    ctx.fillRect(slotX, slotStartY, slotW - 2, 2);
+                    ctx.fillStyle = '#484038';
+                    ctx.fillRect(slotX, slotStartY + slotH - 2, slotW - 2, 2);
+                } else {
+                    ctx.fillStyle = '#141008';
+                    ctx.fillRect(slotX, slotStartY, slotW - 2, slotH);
+                }
+            }
+
+            // Stone count
+            const lblSize = Math.max(9, Math.round(H * 0.028));
+            ctx.font      = `bold ${lblSize}px 'Courier New'`;
+            ctx.textAlign = 'center';
+            ctx.fillStyle = stonesNow >= MINE_CART_MAX ? '#e05050' : '#c8b880';
+            ctx.fillText(`${stonesNow}/${MINE_CART_MAX}`, cartCX, bodyTop - 4);
+
+            // SEND CART button (only when idle with at least 1 stone)
+            if (cart.state === 'idle') {
+                const btnW   = Math.round(cartHW * 2.2);
+                const btnH   = Math.round(H * 0.055);
+                const btnX   = cartHome - Math.round(btnW / 2);
+                const btnY   = bodyTop - Math.round(H * 0.065) - btnH;
+                const canSend = cart.stones > 0;
+                // Store bounds for hit testing (use home position, not animated)
+                mineSendCartBtn = { x: btnX, y: btnY, w: btnW, h: btnH };
+
+                ctx.fillStyle = canSend ? '#4a3820' : '#1e1a12';
+                ctx.fillRect(btnX, btnY, btnW, btnH);
+                ctx.fillStyle = canSend ? '#7a6030' : '#302818';
+                ctx.fillRect(btnX, btnY, btnW, 2);
+                ctx.fillRect(btnX, btnY, 2, btnH);
+                ctx.fillStyle = canSend ? '#2a1e0c' : '#141008';
+                ctx.fillRect(btnX, btnY + btnH - 2, btnW, 2);
+                ctx.fillRect(btnX + btnW - 2, btnY, 2, btnH);
+
+                const btnFontSize = Math.max(9, Math.round(H * 0.026));
+                ctx.font      = `bold ${btnFontSize}px 'Courier New'`;
+                ctx.textAlign = 'center';
+                ctx.fillStyle = canSend ? '#e8c060' : '#504030';
+                ctx.fillText('SEND CART', cartHome, btnY + Math.round(btnH * 0.68));
+            } else {
+                mineSendCartBtn = null;
+            }
+        } else {
+            // Cart is away — clear button and show countdown
+            mineSendCartBtn = null;
+            const secs    = Math.ceil(cart.timer / 1000);
+            const countCX = cartHome;
+            const countCY = wheelCY - Math.round(cartBH * 0.5);
+            const fSz     = Math.max(10, Math.round(H * 0.030));
+            ctx.font      = `bold ${fSz}px 'Courier New'`;
+            ctx.textAlign = 'center';
+            ctx.fillStyle = '#7a6840';
+            ctx.fillText('RETURNING IN', countCX, countCY - fSz);
+            ctx.fillStyle = '#c8a450';
+            ctx.fillText(`${secs}s`, countCX, countCY + Math.round(fSz * 0.4));
+        }
+    }
+
+    // ── Large Rock ──
+    {
+        const b    = getMineRockBounds();
+        const rock = game.mine.rock;
+        const sx   = rock.shakeTimer > 0 ? rock.shakeX : 0;
+        const prog = rock.clicks / MINE_ROCK_CLICKS;
+
+        ctx.save();
+        ctx.translate(sx, 0);
+
+        // Base rock body
+        ctx.beginPath();
+        ctx.ellipse(b.cx, b.cy, b.w / 2, b.h / 2, 0, 0, Math.PI * 2);
+        ctx.fillStyle = '#4a4030';
+        ctx.fill();
+
+        // Mid tone texture blob
+        ctx.beginPath();
+        ctx.ellipse(b.cx - b.w * 0.08, b.cy - b.h * 0.1, b.w * 0.32, b.h * 0.28, -0.25, 0, Math.PI * 2);
+        ctx.fillStyle = '#5c5040';
+        ctx.fill();
+
+        // Highlight (top-left)
+        ctx.beginPath();
+        ctx.ellipse(b.cx - b.w * 0.15, b.cy - b.h * 0.2, b.w * 0.2, b.h * 0.15, -0.4, 0, Math.PI * 2);
+        ctx.fillStyle = '#706050';
+        ctx.fill();
+
+        // Shadow (bottom-right)
+        ctx.beginPath();
+        ctx.ellipse(b.cx + b.w * 0.12, b.cy + b.h * 0.18, b.w * 0.22, b.h * 0.18, 0.35, 0, Math.PI * 2);
+        ctx.fillStyle = '#302820';
+        ctx.fill();
+
+        // Pixel specular dots
+        ctx.fillStyle = '#908060';
+        ctx.fillRect(b.cx - Math.round(b.w * 0.18), b.cy - Math.round(b.h * 0.26), 4, 3);
+        ctx.fillRect(b.cx - Math.round(b.w * 0.06), b.cy - Math.round(b.h * 0.30), 2, 2);
+        ctx.fillStyle = '#a09070';
+        ctx.fillRect(b.cx - Math.round(b.w * 0.20), b.cy - Math.round(b.h * 0.28), 2, 2);
+
+        // Crack lines (revealed progressively)
+        ctx.lineWidth = 2;
+        if (prog >= 0.2) {
+            ctx.strokeStyle = '#1a140a'; ctx.beginPath();
+            ctx.moveTo(b.cx - 4, b.cy - Math.round(b.h * 0.08));
+            ctx.lineTo(b.cx - Math.round(b.w * 0.18), b.cy + Math.round(b.h * 0.15));
+            ctx.stroke();
+        }
+        if (prog >= 0.35) {
+            ctx.strokeStyle = '#1a140a'; ctx.beginPath();
+            ctx.moveTo(b.cx + 6, b.cy + Math.round(b.h * 0.02));
+            ctx.lineTo(b.cx + Math.round(b.w * 0.20), b.cy - Math.round(b.h * 0.12));
+            ctx.stroke();
+        }
+        if (prog >= 0.5) {
+            ctx.strokeStyle = '#151008'; ctx.beginPath();
+            ctx.moveTo(b.cx - 6, b.cy + Math.round(b.h * 0.06));
+            ctx.lineTo(b.cx - Math.round(b.w * 0.10), b.cy + Math.round(b.h * 0.22));
+            ctx.lineTo(b.cx - Math.round(b.w * 0.22), b.cy + Math.round(b.h * 0.14));
+            ctx.stroke();
+        }
+        if (prog >= 0.65) {
+            ctx.strokeStyle = '#1a140a'; ctx.beginPath();
+            ctx.moveTo(b.cx + 4, b.cy - Math.round(b.h * 0.04));
+            ctx.lineTo(b.cx + Math.round(b.w * 0.12), b.cy + Math.round(b.h * 0.18));
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(b.cx - Math.round(b.w * 0.08), b.cy - Math.round(b.h * 0.18));
+            ctx.lineTo(b.cx + Math.round(b.w * 0.02), b.cy + Math.round(b.h * 0.04));
+            ctx.stroke();
+        }
+        if (prog >= 0.8) {
+            ctx.strokeStyle = '#100d06'; ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.moveTo(b.cx - Math.round(b.w * 0.04), b.cy - Math.round(b.h * 0.32));
+            ctx.lineTo(b.cx + Math.round(b.w * 0.06), b.cy + Math.round(b.h * 0.28));
+            ctx.stroke();
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(b.cx - Math.round(b.w * 0.14), b.cy - Math.round(b.h * 0.05));
+            ctx.lineTo(b.cx + Math.round(b.w * 0.08), b.cy - Math.round(b.h * 0.20));
+            ctx.stroke();
+        }
+
+        ctx.restore();
+
+        // ── Progress pips below rock ──
+        const pipSz  = 7;
+        const pipGap = 5;
+        const totalPW = MINE_ROCK_CLICKS * (pipSz + pipGap) - pipGap;
+        const pipX0  = b.cx - Math.round(totalPW / 2);
+        const pipY0  = b.y + b.h + Math.round(H * 0.012);
+        for (let p = 0; p < MINE_ROCK_CLICKS; p++) {
+            ctx.fillStyle = p < rock.clicks ? '#c8a450' : '#2e2618';
+            ctx.fillRect(pipX0 + p * (pipSz + pipGap), pipY0, pipSz, pipSz);
+        }
+        // Pip border
+        ctx.strokeStyle = '#1a1408';
+        ctx.lineWidth = 1;
+        for (let p = 0; p < MINE_ROCK_CLICKS; p++) {
+            ctx.strokeRect(pipX0 + p * (pipSz + pipGap), pipY0, pipSz, pipSz);
+        }
+    }
+
+    drawFloats();
+}
+
+// ═══════════════════════════════════════════════════════════════
 //  GAME LOOP
 // ═══════════════════════════════════════════════════════════════
 let lastTs = 0;
@@ -1535,13 +1998,13 @@ function chopTree(tree, cx) {
     const gained = getWoodMultiplier() * getLeafLitterMult();
     game.wood += gained;
     const wLabel = gained % 1 === 0 ? `+${gained} WOOD` : `+${gained.toFixed(2)} WOOD`;
-    if (activeTab !== 'farm') spawnFloat(cx, GROUND - TREE_ART[3].length * P - 20, wLabel, '#c8a450');
+    if (activeTab === 'wood') spawnFloat(cx, GROUND - TREE_ART[3].length * P - 20, wLabel, '#c8a450');
 
     if (tree.hasFruit) {
         const foodGained = getFoodMultiplier() * getCropRotMult();
         game.food += foodGained;
         const fLabel = foodGained % 1 === 0 ? `+${foodGained} FOOD` : `+${foodGained.toFixed(2)} FOOD`;
-        if (activeTab !== 'farm') spawnFloat(cx, GROUND - TREE_ART[3].length * P - 36, fLabel, '#e07020');
+        if (activeTab === 'wood') spawnFloat(cx, GROUND - TREE_ART[3].length * P - 36, fLabel, '#e07020');
     }
 
     game.firstChopDone = true;
@@ -1573,7 +2036,7 @@ function loop(ts) {
                 // Roll fruit chance
                 const fc = getFruitChance();
                 if (fc > 0 && Math.random() < fc) tree.hasFruit = true;
-                if (activeTab !== 'farm') spawnFloat(cx, GROUND - TREE_ART[3].length * P - 20, '✦ READY ✦', '#6DC040');
+                if (activeTab === 'wood') spawnFloat(cx, GROUND - TREE_ART[3].length * P - 20, '✦ READY ✦', '#6DC040');
             }
         }
 
@@ -1619,6 +2082,34 @@ function loop(ts) {
         if (f.life <= 0) floats.splice(i, 1);
     }
 
+    // Mine rock shake
+    if (game.mine.rock.shakeTimer > 0) {
+        game.mine.rock.shakeTimer -= dt;
+        game.mine.rock.shakeX = Math.sin(game.mine.rock.shakeTimer * 0.4) * 3;
+    }
+
+    // Mine cart travel / return timer
+    {
+        const cart = game.mine.cart;
+        if (cart.state === 'leaving') {
+            cart.travelX += dt * (W * 0.0014);   // crosses screen in ~0.7 s
+            if (cart.travelX > W) {
+                cart.state = 'away';
+                cart.timer = 30000;
+            }
+        } else if (cart.state === 'away') {
+            cart.timer = Math.max(0, cart.timer - dt);
+            if (cart.timer <= 0) {
+                game.stone += cart.transportStones;
+                cart.transportStones = 0;
+                cart.state = 'idle';
+                cart.travelX = 0;
+                updateHUD();
+                saveGame();
+            }
+        }
+    }
+
     // Grow wheat plots regardless of active tab
     for (const plot of game.farm.plots) {
         if (!plot.grown) {
@@ -1633,6 +2124,9 @@ function loop(ts) {
     ctx.clearRect(0, 0, W, H);
     if (activeTab === 'farm') {
         drawFarmScene(ts);
+        if (ts - lastHudSync >= 200) { updateHUD(); syncPanel(); lastHudSync = ts; }
+    } else if (activeTab === 'mine') {
+        drawMineScene(ts);
         if (ts - lastHudSync >= 200) { updateHUD(); syncPanel(); lastHudSync = ts; }
     } else {
         drawBackground(ts);
@@ -1676,7 +2170,12 @@ function handleTap(clientX, clientY) {
 let swipeStartX = null;
 
 canvas.addEventListener('click', (e) => {
-    if (activeTab === 'wood') handleTap(e.clientX, e.clientY);
+    if (activeTab === 'wood') {
+        handleTap(e.clientX, e.clientY);
+    } else if (activeTab === 'mine') {
+        const rect = canvas.getBoundingClientRect();
+        mineRockTap((e.clientX - rect.left) * (W / rect.width), (e.clientY - rect.top) * (H / rect.height));
+    }
 });
 
 canvas.addEventListener('mousedown', (e) => {
@@ -1693,6 +2192,11 @@ canvas.addEventListener('mouseup', (e) => {
 canvas.addEventListener('touchstart', (e) => {
     if (activeTab === 'farm') {
         swipeStartX = e.changedTouches[0].clientX;
+    } else if (activeTab === 'mine') {
+        e.preventDefault();
+        const t    = e.changedTouches[0];
+        const rect = canvas.getBoundingClientRect();
+        mineRockTap((t.clientX - rect.left) * (W / rect.width), (t.clientY - rect.top) * (H / rect.height));
     } else {
         e.preventDefault();
         handleTap(e.changedTouches[0].clientX, e.changedTouches[0].clientY);
@@ -1708,11 +2212,24 @@ canvas.addEventListener('touchend', (e) => {
 });
 
 canvas.addEventListener('mousemove', (e) => {
-    if (activeTab !== 'wood') { canvas.style.cursor = 'default'; return; }
     const rect = canvas.getBoundingClientRect();
     const mx   = (e.clientX - rect.left) * (W / rect.width);
     const my   = (e.clientY - rect.top)  * (H / rect.height);
-    const ctrs = treeCenters();
+    if (activeTab === 'mine') {
+        // Check SEND CART button
+        if (mineSendCartBtn && game.mine.cart.stones > 0 &&
+            mx >= mineSendCartBtn.x && mx <= mineSendCartBtn.x + mineSendCartBtn.w &&
+            my >= mineSendCartBtn.y && my <= mineSendCartBtn.y + mineSendCartBtn.h) {
+            canvas.style.cursor = 'pointer'; return;
+        }
+        const b  = getMineRockBounds();
+        const dx = (mx - b.cx) / (b.w / 2);
+        const dy = (my - b.cy) / (b.h / 2);
+        canvas.style.cursor = (dx * dx + dy * dy <= 1 && game.mine.cart.state === 'idle') ? 'pointer' : 'default';
+        return;
+    }
+    if (activeTab !== 'wood') { canvas.style.cursor = 'default'; return; }
+    const ctrs  = treeCenters();
     const hover = game.trees.some((tree, i) => tree.grown && hitTest(mx, my, ctrs[i], tree));
     canvas.style.cursor = hover ? 'pointer' : 'default';
 });
@@ -1735,6 +2252,14 @@ function saveGame() {
                 clicks: t.clicks, hasFruit: t.hasFruit,
             })),
             farm: { plots: game.farm.plots.map(p => ({ growth: p.growth, grown: p.grown })) },
+            mine: {
+                rockClicks: game.mine.rock.clicks,
+                cartStones: game.mine.cart.stones,
+                cartState: game.mine.cart.state,
+                cartTimer: game.mine.cart.timer,
+                cartTransportStones: game.mine.cart.transportStones,
+            },
+            stone: game.stone,
         };
         localStorage.setItem(SAVE_KEY, JSON.stringify(data));
 
@@ -1784,9 +2309,24 @@ function loadGame() {
             }));
         }
 
+        // Restore mine state
+        if (data.mine) {
+            game.mine.rock.clicks          = typeof data.mine.rockClicks          === 'number' ? data.mine.rockClicks          : 0;
+            game.mine.cart.stones          = typeof data.mine.cartStones          === 'number' ? data.mine.cartStones          : 0;
+            game.mine.cart.state           = ['idle','leaving','away'].includes(data.mine.cartState) ? data.mine.cartState : 'idle';
+            game.mine.cart.timer           = typeof data.mine.cartTimer           === 'number' ? data.mine.cartTimer           : 0;
+            game.mine.cart.transportStones = typeof data.mine.cartTransportStones === 'number' ? data.mine.cartTransportStones : 0;
+            // Snap 'leaving' to 'away' on reload (animation already happened)
+            if (game.mine.cart.state === 'leaving') { game.mine.cart.state = 'away'; game.mine.cart.travelX = 0; }
+        }
+        if (typeof data.stone === 'number' && isFinite(data.stone)) game.stone = data.stone;
+
         // Restore UI state
         if (UPGRADES[7].level > 0) {
             document.getElementById('tab-farm-btn').style.display = '';
+        }
+        if (UPGRADES[14].level > 0) {
+            document.getElementById('tab-mine-btn').style.display = '';
         }
         if (UPGRADES[4].level > 0 || game.food > 0) {
             document.getElementById('food-hud').classList.remove('hidden');
@@ -1812,15 +2352,21 @@ function resetGameState() {
     game.lodgeAccum    = 0;
     game.trees         = [makeTree()];
     game.farm          = { plots: [makePlot()] };
+    game.mine          = makeMine();
+    game.stone         = 0;
+    mineSendCartBtn    = null;
     UPGRADES.forEach(u => u.level = 0);
     document.getElementById('tab-farm-btn').style.display = 'none';
+    document.getElementById('tab-mine-btn').style.display = 'none';
     document.getElementById('food-hud').classList.add('hidden');
+    document.getElementById('stone-hud').classList.add('hidden');
 }
 
 function matchFarmTabHeight() {
     const woodEl = document.getElementById('tab-wood');
-    const farmEl = document.getElementById('tab-farm');
-    farmEl.style.minHeight = woodEl.offsetHeight + 'px';
+    const h = woodEl.offsetHeight + 'px';
+    document.getElementById('tab-farm').style.minHeight = h;
+    document.getElementById('tab-mine').style.minHeight = h;
 }
 
 function startGame() {
