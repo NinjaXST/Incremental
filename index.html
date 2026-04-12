@@ -415,8 +415,8 @@
                 <div class="cards-row">
                     <div id="upg-10" class="upg-card"></div>
                     <div id="upg-11" class="upg-card"></div>
+                    <div id="upg-15" class="upg-card"></div>
                     <div id="upg-14" class="upg-card"></div>
-                    <div class="upg-card maxed"><div class="upg-name">—</div><div class="upg-cost-row">LOCKED</div></div>
                 </div>
             </div>
             <div id="tab-mine">
@@ -678,7 +678,7 @@ const UPGRADES = [
     {
         id: 'scythe', name: 'SHARP SCYTHE', maxLevel: 5, level: 0,
         currency: 'mixed',
-        get woodCost() { return Math.ceil(400 * Math.pow(2, this.level)); },
+        get woodCost() { return Math.ceil(400 * Math.pow(1.30, this.level)); },
         get foodCost() { return Math.ceil(50  * Math.pow(2, this.level)); },
         cost() { return this.woodCost; },
         effectText() {
@@ -691,7 +691,7 @@ const UPGRADES = [
     {
         id: 'fertilizer', name: 'FERTILIZER', maxLevel: 10, level: 0,
         currency: 'mixed',
-        get woodCost() { return Math.ceil(800 * Math.pow(1.618, this.level)); },
+        get woodCost() { return Math.ceil(800 * Math.pow(1.05, this.level)); },
         get foodCost() { return Math.ceil(100 * Math.pow(1.618, this.level)); },
         cost() { return this.woodCost; },
         effectText() {
@@ -704,8 +704,8 @@ const UPGRADES = [
     {
         id: 'croprot', name: 'CROP ROTATION', maxLevel: 10, level: 0,
         currency: 'mixed',
-        get woodCost() { return Math.ceil(4000 * Math.pow(1.8, this.level)); },
-        get foodCost() { return Math.ceil(500  * Math.pow(1.8, this.level)); },
+        get woodCost() { return Math.ceil(4000 * Math.pow(1.17, this.level)); },
+        get foodCost() { return Math.ceil(500  * Math.pow(1.08, this.level)); },
         cost() { return this.woodCost; },
         effectText() {
             const cur = Math.pow(1.5, this.level).toFixed(2);
@@ -718,7 +718,7 @@ const UPGRADES = [
     {
         id: 'newplot', name: 'NEW PLOT', maxLevel: 3, level: 0,
         currency: 'mixed',
-        get woodCost() { return Math.ceil(6000 * Math.pow(3, this.level)); },
+        get woodCost() { return Math.ceil(6000 * Math.pow(1.95, this.level)); },
         get foodCost() { return Math.ceil(800  * Math.pow(3, this.level)); },
         cost() { return this.woodCost; },
         effectText() {
@@ -731,7 +731,7 @@ const UPGRADES = [
     {
         id: 'pureline', name: 'PURE LINE SELECTION', maxLevel: 10, level: 0,
         currency: 'mixed',
-        get woodCost() { return Math.ceil(1200 * Math.pow(1.7, this.level)); },
+        get woodCost() { return Math.ceil(1200 * Math.pow(1.10, this.level)); },
         get foodCost() { return Math.ceil(200 * Math.pow(1.7, this.level)); },
         cost() { return this.woodCost; },
         multiplier() { return Math.pow(1.5, this.level); },
@@ -746,7 +746,7 @@ const UPGRADES = [
     {
         id: 'leaflitter', name: 'INCREASE BIODIVERSITY', maxLevel: 10, level: 0,
         currency: 'mixed',
-        get woodCost() { return Math.ceil(1200 * Math.pow(1.7, this.level)); },
+        get woodCost() { return Math.ceil(1200 * Math.pow(1.10, this.level)); },
         get foodCost() { return Math.ceil(200 * Math.pow(1.7, this.level)); },
         cost() { return this.woodCost; },
         multiplier() { return Math.pow(1.5, this.level); },
@@ -755,6 +755,26 @@ const UPGRADES = [
             if (this.level >= this.maxLevel) return `Wood from Trees\n×${cur}`;
             const nxt = Math.pow(1.5, this.level + 1).toFixed(2);
             return `Wood from Trees\n×${cur} → ×${nxt}`;
+        },
+    },
+    // 15 – Windmill (farm upgrade, auto-swipe wheat)
+    {
+        id: 'windmill', name: 'WINDMILL', maxLevel: 3, level: 0,
+        currency: 'stone-mixed',
+        get woodCost() {
+            const costs = [10000, 30000, 100000];
+            return costs[this.level] ?? 999999;
+        },
+        get stoneCost() {
+            const costs = [5, 20, 100];
+            return costs[this.level] ?? 999999;
+        },
+        cost() { return this.woodCost; },
+        effectText() {
+            const intervals = [0, 6, 4, 2];
+            if (this.level === 0) return `Swipe every\n${intervals[1]}s`;
+            if (this.level >= this.maxLevel) return `Swipe every\n${intervals[this.level]}s`;
+            return `Swipe every\n${intervals[this.level]}s → ${intervals[this.level + 1]}s`;
         },
     },
     // 14 – Mine Shafts (farm upgrade, unlocks Mine tab)
@@ -781,7 +801,7 @@ function getWheatGrowTime()     { return WHEAT_GROW_TIME - UPGRADES[9].level * 5
 function getCropRotMult()       { return Math.pow(1.5, UPGRADES[10].level); }
 function getPureLineMult()      { return UPGRADES[12].multiplier(); }
 function getLeafLitterMult()   { return UPGRADES[13].multiplier(); }
-function formatNum(n)        { return Number.isInteger(n) ? n : n.toFixed(2); }
+function formatNum(n)        { return (Number.isInteger(n) || n >= 100) ? Math.floor(n) : n.toFixed(2); }
 
 // ═══════════════════════════════════════════════════════════════
 //  GAME STATE
@@ -805,7 +825,7 @@ function makeMine() {
 const game = {
     wood: 0, food: 0, stone: 0,
     trees: [makeTree()],
-    firstChopDone: false, lodgeAccum: 0,
+    firstChopDone: false, lodgeAccum: 0, windmillAccum: 0,
     farm: { plots: [makePlot()] },
     mine: makeMine(),
 };
@@ -1227,11 +1247,6 @@ function drawUI(ts) {
             ctx.font      = `bold ${fSize + 4}px "Courier New"`;
             ctx.fillText('▼', cx, topY);
 
-            if (tree.hasFruit) {
-                ctx.fillStyle = '#e07020';
-                ctx.font = `bold ${fSize}px "Courier New"`;
-                ctx.fillText('FRUIT!', cx, topY - fSize - 2);
-            }
 
             if (!game.firstChopDone) {
                 ctx.fillStyle = '#ffe080';
@@ -1251,7 +1266,7 @@ function updateHUD() {
         document.getElementById('food-hud').classList.remove('hidden');
         document.getElementById('foodCount').textContent = formatNum(game.food);
     }
-    if (game.stone > 0 || UPGRADES[14].level > 0) {
+    if (game.stone > 0 || UPGRADES[15].level > 0) {
         document.getElementById('stone-hud').classList.remove('hidden');
         document.getElementById('stoneCount').textContent = formatNum(game.stone);
     }
@@ -1273,6 +1288,8 @@ function buildCard(i) {
         costHtml = '— MAXED —';
     } else if (u.currency === 'mixed') {
         costHtml = `▶ ${u.woodCost}W+${u.foodCost}F`;
+    } else if (u.currency === 'stone-mixed') {
+        costHtml = `▶ ${u.woodCost}W+${u.stoneCost} Stone`;
     } else if (u.currency === 'food') {
         costHtml = `▶ ${u.cost()} FOOD`;
     } else {
@@ -1323,6 +1340,9 @@ function syncPanel() {
             } else if (u.currency === 'mixed') {
                 afford   = game.wood >= u.woodCost && game.food >= u.foodCost;
                 costText = `▶ ${u.woodCost}W+${u.foodCost}F`;
+            } else if (u.currency === 'stone-mixed') {
+                afford   = game.wood >= u.woodCost && game.stone >= u.stoneCost;
+                costText = `▶ ${u.woodCost}W+${u.stoneCost} Stone`;
             }
         }
 
@@ -1352,6 +1372,10 @@ function buyUpgrade(idx) {
         if (game.wood < u.woodCost || game.food < u.foodCost) return;
         game.wood -= u.woodCost;
         game.food -= u.foodCost;
+    } else if (u.currency === 'stone-mixed') {
+        if (game.wood < u.woodCost || game.stone < u.stoneCost) return;
+        game.wood -= u.woodCost;
+        game.stone -= u.stoneCost;
     }
 
     u.level++;
@@ -1578,6 +1602,112 @@ function drawFarmScene(ts) {
     ctx.fillStyle = '#1e4810';
     ctx.fillRect(0, skyH + 4, W, 8);
 
+    // ── Windmill (drawn behind ground when purchased) ──
+    if (UPGRADES[14].level > 0) {
+        const wmCX  = Math.round(W * 0.82);
+        const wmBase = skyH + 6;          // sits on the hedgerow
+        const towerH = Math.round(H * 0.22);
+        const towerWBot = Math.round(W * 0.045);
+        const towerWTop = Math.round(W * 0.028);
+        const towerTop  = wmBase - towerH;
+
+        // ── Tower (stone base, tapered) ──
+        ctx.fillStyle = '#7a6e5a';
+        ctx.beginPath();
+        ctx.moveTo(wmCX - towerWBot, wmBase);
+        ctx.lineTo(wmCX + towerWBot, wmBase);
+        ctx.lineTo(wmCX + towerWTop, towerTop);
+        ctx.lineTo(wmCX - towerWTop, towerTop);
+        ctx.closePath(); ctx.fill();
+
+        // Stone block texture on tower
+        ctx.strokeStyle = '#5a5044';
+        ctx.lineWidth = 1;
+        for (let r = 1; r < 5; r++) {
+            const t  = r / 5;
+            const wy = wmBase - towerH * t;
+            const hw = towerWBot + (towerWTop - towerWBot) * t;
+            ctx.beginPath();
+            ctx.moveTo(wmCX - hw, wy);
+            ctx.lineTo(wmCX + hw, wy);
+            ctx.stroke();
+        }
+        // Vertical seam
+        ctx.beginPath();
+        ctx.moveTo(wmCX, wmBase); ctx.lineTo(wmCX, towerTop); ctx.stroke();
+
+        // Tower highlight edge
+        ctx.fillStyle = '#9a8e78';
+        ctx.fillRect(wmCX - towerWBot, wmBase - 2, 3, towerH);
+
+        // ── Cap (wood) ──
+        const capH  = Math.round(H * 0.04);
+        const capW  = towerWTop + Math.round(W * 0.018);
+        ctx.fillStyle = '#7a5228';
+        ctx.fillRect(wmCX - capW, towerTop - capH, capW * 2, capH);
+        ctx.fillStyle = '#5a3810';
+        ctx.fillRect(wmCX - capW, towerTop - capH, capW * 2, 3);
+        // Cap overhang highlight
+        ctx.fillStyle = '#9a6838';
+        ctx.fillRect(wmCX - capW, towerTop - capH, capW * 2, 2);
+
+        // ── Door (arched wood) ──
+        const doorW = Math.round(towerWBot * 0.65);
+        const doorH = Math.round(towerH * 0.28);
+        const doorY = wmBase - doorH;
+        ctx.fillStyle = '#3a2010';
+        ctx.fillRect(wmCX - doorW / 2, doorY, doorW, doorH);
+        ctx.fillStyle = '#5a3818';
+        ctx.beginPath();
+        ctx.arc(wmCX, doorY, Math.round(doorW / 2), Math.PI, 0);
+        ctx.fill();
+        // Door frame
+        ctx.strokeStyle = '#7a5228';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(wmCX - doorW / 2, doorY, doorW, doorH);
+
+        // ── Rotating sails ──
+        const hubX   = wmCX;
+        const hubY   = towerTop + Math.round(capH * 0.4);
+        const bladeL = Math.round(H * 0.14);
+        const bladeW = Math.round(W * 0.016);
+        const rot    = (ts / 2800) * Math.PI * 2 * UPGRADES[14].level;  // faster at higher levels
+
+        ctx.save();
+        ctx.translate(hubX, hubY);
+
+        for (let b = 0; b < 4; b++) {
+            const angle = rot + b * Math.PI / 2;
+            ctx.save();
+            ctx.rotate(angle);
+
+            // Sail frame (wood beam)
+            ctx.fillStyle = '#7a5228';
+            ctx.fillRect(-Math.round(bladeW / 2), -bladeL, bladeW, bladeL);
+
+            // Sail canvas (lighter fill)
+            ctx.fillStyle = '#d4b870';
+            ctx.globalAlpha = 0.85;
+            ctx.beginPath();
+            ctx.moveTo(0, 0);
+            ctx.lineTo(Math.round(bladeW * 2.5), -Math.round(bladeL * 0.25));
+            ctx.lineTo(Math.round(bladeW * 2.0), -Math.round(bladeL * 0.95));
+            ctx.lineTo(0, -bladeL);
+            ctx.closePath(); ctx.fill();
+            ctx.globalAlpha = 1;
+
+            ctx.restore();
+        }
+
+        // Hub center
+        ctx.fillStyle = '#3a2808';
+        ctx.beginPath(); ctx.arc(0, 0, Math.round(W * 0.014), 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = '#6a4a20';
+        ctx.beginPath(); ctx.arc(0, 0, Math.round(W * 0.007), 0, Math.PI * 2); ctx.fill();
+
+        ctx.restore();
+    }
+
     // ── Ground / soil ──
     const groundY = skyH + 12;
     const soilGrad = ctx.createLinearGradient(0, groundY, 0, H);
@@ -1601,7 +1731,73 @@ function drawFarmScene(ts) {
         drawPlot(game.farm.plots[i], layout[i].x, layout[i].w, plotTop, maxStalkH, ts);
     }
 
+    drawFarmSwipes(plotTop, maxStalkH);
     drawFloats();
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  FARM SWIPE ANIMATIONS
+// ═══════════════════════════════════════════════════════════════
+const farmSwipes = [];
+
+function spawnFarmSwipe(plotX, plotW, plotTop, stalkH) {
+    farmSwipes.push({
+        x:      plotX,
+        w:      plotW,
+        y:      plotTop + Math.round(stalkH * 0.55),  // mid-stalk height
+        life:   1.0,   // 0→1, decreases each frame
+        speed:  0.006, // life units per ms
+    });
+}
+
+function drawFarmSwipes(plotTop, maxStalkH) {
+    for (const sw of farmSwipes) {
+        const alpha = sw.life;
+        const prog  = 1 - sw.life;  // 0=start, 1=end
+
+        // Animated leading edge sweeps left→right
+        const sweepX = sw.x + Math.round(sw.w * Math.min(1, prog * 2.2));
+
+        ctx.save();
+        ctx.globalAlpha = alpha * 0.85;
+
+        // Arc curve: quadratic bezier from left to sweepX with upward bow
+        const arcH = Math.round(maxStalkH * 0.18);
+        const midX = sw.x + Math.round((sweepX - sw.x) / 2);
+
+        // Glow blur
+        ctx.shadowColor = '#e8d060';
+        ctx.shadowBlur  = 6;
+
+        // Main slash line
+        ctx.strokeStyle = '#f0e080';
+        ctx.lineWidth   = 3;
+        ctx.beginPath();
+        ctx.moveTo(sw.x, sw.y);
+        ctx.quadraticCurveTo(midX, sw.y - arcH, sweepX, sw.y + Math.round(arcH * 0.4));
+        ctx.stroke();
+
+        // Bright leading edge dot
+        ctx.shadowBlur  = 10;
+        ctx.fillStyle   = '#ffffff';
+        ctx.beginPath();
+        ctx.arc(sweepX, sw.y + Math.round(arcH * 0.4 * (sweepX - sw.x) / sw.w), 3, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Trailing sparkle dots along the arc
+        for (let d = 0; d < 3; d++) {
+            const t  = (d + 1) / 5;
+            const bx = sw.x + (sweepX - sw.x) * t;
+            const by = sw.y + Math.round((- arcH * 4 * t * (1 - t) + arcH * 0.4 * t));
+            ctx.globalAlpha = alpha * (1 - t) * 0.6;
+            ctx.fillStyle   = '#e8d060';
+            ctx.beginPath();
+            ctx.arc(bx, by, 2, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        ctx.restore();
+    }
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -1631,15 +1827,8 @@ function sendCart() {
 }
 
 function mineRockTap(mx, my) {
-    if (game.mine.cart.state !== 'idle') return;
+    // Rock is gone (respawning) — nothing to pick
     if (game.mine.rock.respawnTimer > 0) return;
-    // Check SEND CART button first
-    if (mineSendCartBtn) {
-        const b2 = mineSendCartBtn;
-        if (mx >= b2.x && mx <= b2.x + b2.w && my >= b2.y && my <= b2.y + b2.h) {
-            sendCart(); return;
-        }
-    }
     const b = getMineRockBounds();
     // Ellipse hit test
     const dx = (mx - b.cx) / (b.w / 2);
@@ -1647,6 +1836,13 @@ function mineRockTap(mx, my) {
     if (dx * dx + dy * dy > 1) return;
 
     const rock = game.mine.rock;
+
+    // Block the final pick if cart is not present
+    if (rock.clicks === MINE_ROCK_CLICKS - 1 && game.mine.cart.state !== 'idle') {
+        spawnFloat(b.cx, b.y - 28, 'CART MISSING', '#e05050', 18);
+        return;
+    }
+
     rock.clicks++;
     rock.shakeTimer = 120;
 
@@ -1769,7 +1965,7 @@ function drawMineScene(ts) {
         const bodyL    = cartCX - cartHW;
         const bodyR    = cartCX + cartHW;
 
-        if (cart.state !== 'away') {
+        if (cart.state !== 'depositing' && cart.state !== 'returning') {
             // Wheels
             for (const wx of [cartCX - cartHW + wheelR + 2, cartCX + cartHW - wheelR - 2]) {
                 ctx.fillStyle = '#1e1a10';
@@ -1867,7 +2063,7 @@ function drawMineScene(ts) {
                 mineSendCartBtn = null;
             }
         } else {
-            // Cart is away — clear button and show countdown
+            // Cart is away — clear button and show phase countdown
             mineSendCartBtn = null;
             const secs    = Math.ceil(cart.timer / 1000);
             const countCX = cartHome;
@@ -1876,7 +2072,7 @@ function drawMineScene(ts) {
             ctx.font      = `bold ${fSz}px 'Courier New'`;
             ctx.textAlign = 'center';
             ctx.fillStyle = '#7a6840';
-            ctx.fillText('RETURNING IN', countCX, countCY - fSz);
+            ctx.fillText(cart.state === 'depositing' ? 'DEPOSITING IN' : 'RETURNING IN', countCX, countCY - fSz);
             ctx.fillStyle = '#c8a450';
             ctx.fillText(`${secs}s`, countCX, countCY + Math.round(fSz * 0.4));
         }
@@ -1935,6 +2131,15 @@ function drawMineScene(ts) {
         ctx.fillRect(b.cx - Math.round(b.w * 0.06), b.cy - Math.round(b.h * 0.30), 2, 2);
         ctx.fillStyle = '#a09070';
         ctx.fillRect(b.cx - Math.round(b.w * 0.20), b.cy - Math.round(b.h * 0.28), 2, 2);
+
+        // Swipe hint (shown until rock is fully mined)
+        {
+            const hintSz = Math.max(9, Math.round(H * 0.024));
+            ctx.font      = `bold ${hintSz}px 'Courier New'`;
+            ctx.textAlign = 'center';
+            ctx.fillStyle = 'rgba(200,180,120,0.50)';
+            ctx.fillText('▼ SWIPE DOWN ▼', b.cx, b.y + b.h - Math.round(hintSz * 0.6));
+        }
 
         // Crack lines (revealed progressively)
         ctx.lineWidth = 2;
@@ -2085,6 +2290,25 @@ function loop(ts) {
         }
     }
 
+    // Windmill auto-swipe
+    const windmillRates = [0, 1/6, 1/4, 1/2];  // swipes per second per level
+    const windmillSPS = windmillRates[UPGRADES[14].level] || 0;
+    if (windmillSPS > 0) {
+        game.windmillAccum += dt * windmillSPS / 1000;
+        while (game.windmillAccum >= 1) {
+            game.windmillAccum -= 1;
+            const grownPlots = game.farm.plots.map((p, i) => i).filter(i => game.farm.plots[i].grown);
+            if (grownPlots.length > 0) {
+                const idx     = grownPlots[Math.floor(Math.random() * grownPlots.length)];
+                const layout  = getPlotLayout();
+                const plotTop = Math.round(H * 0.30);
+                const stalkH  = Math.round(H * 0.42);
+                spawnFarmSwipe(layout[idx].x, layout[idx].w, plotTop, stalkH);
+                harvestWheat(idx);
+            }
+        }
+    }
+
     for (let i = particles.length - 1; i >= 0; i--) {
         const p = particles[i];
         p.x += p.vx; p.y += p.vy; p.vy += 0.35;
@@ -2097,6 +2321,11 @@ function loop(ts) {
         f.y    -= dt * 0.035;
         f.life -= dt / 1600;
         if (f.life <= 0) floats.splice(i, 1);
+    }
+
+    for (let i = farmSwipes.length - 1; i >= 0; i--) {
+        farmSwipes[i].life -= dt * farmSwipes[i].speed;
+        if (farmSwipes[i].life <= 0) farmSwipes.splice(i, 1);
     }
 
     // Mine rock shake / respawn
@@ -2112,19 +2341,26 @@ function loop(ts) {
     {
         const cart = game.mine.cart;
         if (cart.state === 'leaving') {
-            cart.travelX += dt * (W * 0.0014);   // crosses screen in ~0.7 s
+            cart.travelX += dt * (W * 0.0014);
             if (cart.travelX > W) {
-                cart.state = 'away';
-                cart.timer = 30000;
+                cart.state = 'depositing';
+                cart.timer = 15000;
             }
-        } else if (cart.state === 'away') {
+        } else if (cart.state === 'depositing') {
             cart.timer = Math.max(0, cart.timer - dt);
             if (cart.timer <= 0) {
                 game.stone += cart.transportStones;
                 cart.transportStones = 0;
+                cart.state = 'returning';
+                cart.timer = 15000;
+                updateHUD();
+                saveGame();
+            }
+        } else if (cart.state === 'returning') {
+            cart.timer = Math.max(0, cart.timer - dt);
+            if (cart.timer <= 0) {
                 cart.state = 'idle';
                 cart.travelX = 0;
-                updateHUD();
                 saveGame();
             }
         }
@@ -2188,24 +2424,56 @@ function handleTap(clientX, clientY) {
 }
 
 let swipeStartX = null;
+let mineSwipeStart = null;  // { x, y } in canvas coords
+
+function handleMineSwipeStart(clientX, clientY) {
+    const rect = canvas.getBoundingClientRect();
+    mineSwipeStart = {
+        x: (clientX - rect.left) * (W / rect.width),
+        y: (clientY - rect.top)  * (H / rect.height),
+    };
+}
+
+function handleMineSwipeEnd(clientX, clientY) {
+    if (!mineSwipeStart) return;
+    const rect  = canvas.getBoundingClientRect();
+    const ex    = (clientX - rect.left) * (W / rect.width);
+    const ey    = (clientY - rect.top)  * (H / rect.height);
+    const dx    = ex - mineSwipeStart.x;
+    const dy    = ey - mineSwipeStart.y;
+    const start = mineSwipeStart;
+    mineSwipeStart = null;
+
+    // Check SEND CART button (short tap counts too)
+    if (mineSendCartBtn && game.mine.cart.state === 'idle') {
+        const b2 = mineSendCartBtn;
+        if (start.x >= b2.x && start.x <= b2.x + b2.w && start.y >= b2.y && start.y <= b2.y + b2.h) {
+            sendCart(); return;
+        }
+    }
+
+    // Downward swipe on rock: must be mostly vertical down, minimum distance
+    const minDist = H * 0.06;
+    if (dy > minDist && Math.abs(dy) > Math.abs(dx)) {
+        mineRockTap(start.x, start.y);
+    }
+}
 
 canvas.addEventListener('click', (e) => {
-    if (activeTab === 'wood') {
-        handleTap(e.clientX, e.clientY);
-    } else if (activeTab === 'mine') {
-        const rect = canvas.getBoundingClientRect();
-        mineRockTap((e.clientX - rect.left) * (W / rect.width), (e.clientY - rect.top) * (H / rect.height));
-    }
+    if (activeTab === 'wood') handleTap(e.clientX, e.clientY);
 });
 
 canvas.addEventListener('mousedown', (e) => {
     if (activeTab === 'farm') swipeStartX = e.clientX;
+    else if (activeTab === 'mine') handleMineSwipeStart(e.clientX, e.clientY);
 });
 canvas.addEventListener('mouseup', (e) => {
     if (activeTab === 'farm' && swipeStartX !== null) {
         if (Math.abs(e.clientX - swipeStartX) > W * 0.15)
             harvestWheat(getPlotIdxFromClientX(swipeStartX));
         swipeStartX = null;
+    } else if (activeTab === 'mine') {
+        handleMineSwipeEnd(e.clientX, e.clientY);
     }
 });
 
@@ -2214,9 +2482,7 @@ canvas.addEventListener('touchstart', (e) => {
         swipeStartX = e.changedTouches[0].clientX;
     } else if (activeTab === 'mine') {
         e.preventDefault();
-        const t    = e.changedTouches[0];
-        const rect = canvas.getBoundingClientRect();
-        mineRockTap((t.clientX - rect.left) * (W / rect.width), (t.clientY - rect.top) * (H / rect.height));
+        handleMineSwipeStart(e.changedTouches[0].clientX, e.changedTouches[0].clientY);
     } else {
         e.preventDefault();
         handleTap(e.changedTouches[0].clientX, e.changedTouches[0].clientY);
@@ -2228,8 +2494,11 @@ canvas.addEventListener('touchend', (e) => {
         if (Math.abs(e.changedTouches[0].clientX - swipeStartX) > W * 0.15)
             harvestWheat(getPlotIdxFromClientX(swipeStartX));
         swipeStartX = null;
+    } else if (activeTab === 'mine') {
+        e.preventDefault();
+        handleMineSwipeEnd(e.changedTouches[0].clientX, e.changedTouches[0].clientY);
     }
-});
+}, { passive: false });
 
 canvas.addEventListener('mousemove', (e) => {
     const rect = canvas.getBoundingClientRect();
@@ -2245,7 +2514,7 @@ canvas.addEventListener('mousemove', (e) => {
         const b  = getMineRockBounds();
         const dx = (mx - b.cx) / (b.w / 2);
         const dy = (my - b.cy) / (b.h / 2);
-        canvas.style.cursor = (dx * dx + dy * dy <= 1 && game.mine.cart.state === 'idle') ? 'pointer' : 'default';
+        canvas.style.cursor = (dx * dx + dy * dy <= 1 && game.mine.rock.respawnTimer <= 0) ? 'crosshair' : 'default';
         return;
     }
     if (activeTab !== 'wood') { canvas.style.cursor = 'default'; return; }
@@ -2335,11 +2604,11 @@ function loadGame() {
             game.mine.rock.clicks          = typeof data.mine.rockClicks          === 'number' ? data.mine.rockClicks          : 0;
             game.mine.rock.respawnTimer    = typeof data.mine.rockRespawnTimer    === 'number' ? data.mine.rockRespawnTimer    : 0;
             game.mine.cart.stones          = typeof data.mine.cartStones          === 'number' ? data.mine.cartStones          : 0;
-            game.mine.cart.state           = ['idle','leaving','away'].includes(data.mine.cartState) ? data.mine.cartState : 'idle';
+            game.mine.cart.state           = ['idle','leaving','depositing','returning'].includes(data.mine.cartState) ? data.mine.cartState : 'idle';
             game.mine.cart.timer           = typeof data.mine.cartTimer           === 'number' ? data.mine.cartTimer           : 0;
             game.mine.cart.transportStones = typeof data.mine.cartTransportStones === 'number' ? data.mine.cartTransportStones : 0;
-            // Snap 'leaving' to 'away' on reload (animation already happened)
-            if (game.mine.cart.state === 'leaving') { game.mine.cart.state = 'away'; game.mine.cart.travelX = 0; }
+            // Snap 'leaving' to 'depositing' on reload (animation already happened)
+            if (game.mine.cart.state === 'leaving') { game.mine.cart.state = 'depositing'; game.mine.cart.timer = 15000; game.mine.cart.travelX = 0; }
         }
         if (typeof data.stone === 'number' && isFinite(data.stone)) game.stone = data.stone;
 
@@ -2347,7 +2616,7 @@ function loadGame() {
         if (UPGRADES[7].level > 0) {
             document.getElementById('tab-farm-btn').style.display = '';
         }
-        if (UPGRADES[14].level > 0) {
+        if (UPGRADES[15].level > 0) {
             document.getElementById('tab-mine-btn').style.display = '';
         }
         if (UPGRADES[4].level > 0 || game.food > 0) {
@@ -2370,8 +2639,9 @@ function eraseSave() {
 function resetGameState() {
     game.wood          = 0;
     game.food          = 0;
-    game.firstChopDone = false;
-    game.lodgeAccum    = 0;
+    game.firstChopDone  = false;
+    game.lodgeAccum     = 0;
+    game.windmillAccum  = 0;
     game.trees         = [makeTree()];
     game.farm          = { plots: [makePlot()] };
     game.mine          = makeMine();
@@ -2411,8 +2681,9 @@ let devMaxUsed = false;
 
 function devMaxAll() {
     if (devMaxUsed) {
-        game.wood += 10000;
-        game.food += 10000;
+        game.wood  += 10000;
+        game.food  += 10000;
+        game.stone += 10000;
         updateHUD();
         return;
     }
