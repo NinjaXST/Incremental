@@ -194,6 +194,7 @@
             padding: clamp(5px, 1.5vw, 8px) 3px;
             border: 1px solid #3a1e08;
             text-align: center;
+            line-height: 1.5;
         }
         .affordable .upg-cost-row { color: #6DC040; border-color: #3a6020; background: #0d1808; }
         .affordable:hover .upg-cost-row,
@@ -215,7 +216,7 @@
         }
         #tab-mine.active { display: flex; }
 
-        /* ── Save indicator ── */
+        /* ── Save indicator (removed) ──
         #save-indicator {
             position: fixed;
             top: 8px;
@@ -231,7 +232,7 @@
             pointer-events: none;
             z-index: 100;
         }
-        #save-indicator.show { opacity: 1; }
+        #save-indicator.show { opacity: 1; } */
 
         /* ── Title screen ── */
         #title-screen {
@@ -376,13 +377,12 @@
         </div>
     </div>
 
-    <div id="save-indicator">SAVED</div>
     <div id="wrapper">
         <canvas id="gameCanvas"></canvas>
         <div id="hud">
-            <div>Wood: <span id="woodCount">0</span></div>
-            <div id="food-hud" class="hidden">Food: <span id="foodCount">0</span></div>
-            <div id="stone-hud" class="hidden">Stone: <span id="stoneCount">0</span></div>
+            <div>🌳 <span id="woodCount">0</span></div>
+            <div id="food-hud" class="hidden">🌾 <span id="foodCount">0</span></div>
+            <div id="stone-hud" class="hidden">🗻 <span id="stoneCount">0</span></div>
         </div>
         <div id="upgrade-panel">
             <div id="tab-bar">
@@ -406,6 +406,7 @@
                 </div>
             </div>
             <div id="tab-farm">
+                <button onclick="devUnlockMine()" style="display:block;width:100%;padding:4px 0;background:#1a0a0a;color:#ff4040;font-family:'Courier New',monospace;font-size:11px;font-weight:900;letter-spacing:2px;border:1px dashed #ff4040;cursor:pointer;">⚠ DEV: UNLOCK MINE</button>
                 <div class="cards-row">
                     <div id="upg-8" class="upg-card"></div>
                     <div id="upg-9" class="upg-card"></div>
@@ -415,13 +416,13 @@
                 <div class="cards-row">
                     <div id="upg-10" class="upg-card"></div>
                     <div id="upg-11" class="upg-card"></div>
-                    <div id="upg-15" class="upg-card"></div>
+                    <div id="upg-16" class="upg-card"></div>
                     <div id="upg-14" class="upg-card"></div>
                 </div>
             </div>
             <div id="tab-mine">
                 <div class="cards-row">
-                    <div class="upg-card maxed"><div class="upg-name">—</div><div class="upg-cost-row">LOCKED</div></div>
+                    <div id="upg-15" class="upg-card"></div>
                     <div class="upg-card maxed"><div class="upg-name">—</div><div class="upg-cost-row">LOCKED</div></div>
                     <div class="upg-card maxed"><div class="upg-name">—</div><div class="upg-cost-row">LOCKED</div></div>
                     <div class="upg-card maxed"><div class="upg-name">—</div><div class="upg-cost-row">LOCKED</div></div>
@@ -744,7 +745,7 @@ const UPGRADES = [
     },
     // 13 – Leaf Litter (farm upgrade)
     {
-        id: 'leaflitter', name: 'INCREASE BIODIVERSITY', maxLevel: 10, level: 0,
+        id: 'leaflitter', name: 'BIODIVERSITY', maxLevel: 10, level: 0,
         currency: 'mixed',
         get woodCost() { return Math.ceil(1200 * Math.pow(1.10, this.level)); },
         get foodCost() { return Math.ceil(200 * Math.pow(1.7, this.level)); },
@@ -777,12 +778,36 @@ const UPGRADES = [
             return `Swipe every\n${intervals[this.level]}s → ${intervals[this.level + 1]}s`;
         },
     },
-    // 14 – Mine Shafts (farm upgrade, unlocks Mine tab)
+    // 16 – Cart Capacity (mine upgrade)
+    {
+        id: 'cartcap', name: 'CART CAPACITY', maxLevel: 5, level: 0,
+        currency: 'tri-mixed',
+        get woodCost()  {
+            const fibs = [1, 1, 2, 3, 5];
+            return Math.ceil(20000 * fibs[this.level]);
+        },
+        get foodCost()  {
+            const fibs = [1, 1, 2, 3, 5];
+            return Math.ceil(1000 * fibs[this.level]);
+        },
+        get stoneCost() {
+            const fibs = [1, 1, 2, 3, 5];
+            return Math.ceil(3 * fibs[this.level]);
+        },
+        cost() { return this.woodCost; },
+        effectText() {
+            const cap = MINE_CART_MAX + this.level;
+            if (this.level >= this.maxLevel) return `Cart capacity\n${cap} stones`;
+            return `Cart capacity\n${cap} → ${cap + 1}`;
+        },
+    },
+    // 15 – Mine Shafts (farm upgrade, unlocks Mine tab)
     {
         id: 'mine', name: 'MINE SHAFTS', maxLevel: 1, level: 0,
-        currency: 'wood',
-        costBase: 0, costMult: 1,
-        cost() { return 0; },
+        currency: 'mixed',
+        get woodCost() { return 250000; },
+        get foodCost()  { return 25000; },
+        cost() { return this.woodCost; },
         effectText() {
             if (this.level >= this.maxLevel) return 'Mine: Open';
             return 'Unlock\nMine tab';
@@ -802,6 +827,7 @@ function getCropRotMult()       { return Math.pow(1.5, UPGRADES[10].level); }
 function getPureLineMult()      { return UPGRADES[12].multiplier(); }
 function getLeafLitterMult()   { return UPGRADES[13].multiplier(); }
 function formatNum(n)        { return (Number.isInteger(n) || n >= 100) ? Math.floor(n) : n.toFixed(2); }
+function formatCost(n)      { return n >= 10000 ? Math.round(n / 1000) + 'k' : String(Math.ceil(n)); }
 
 // ═══════════════════════════════════════════════════════════════
 //  GAME STATE
@@ -1266,7 +1292,7 @@ function updateHUD() {
         document.getElementById('food-hud').classList.remove('hidden');
         document.getElementById('foodCount').textContent = formatNum(game.food);
     }
-    if (game.stone > 0 || UPGRADES[15].level > 0) {
+    if (game.stone > 0 || UPGRADES[16].level > 0) {
         document.getElementById('stone-hud').classList.remove('hidden');
         document.getElementById('stoneCount').textContent = formatNum(game.stone);
     }
@@ -1287,13 +1313,15 @@ function buildCard(i) {
     if (atMax) {
         costHtml = '— MAXED —';
     } else if (u.currency === 'mixed') {
-        costHtml = `▶ ${u.woodCost}W+${u.foodCost}F`;
+        costHtml = `${formatCost(u.woodCost)} 🌳<br>${formatCost(u.foodCost)} 🌾`;
     } else if (u.currency === 'stone-mixed') {
-        costHtml = `▶ ${u.woodCost}W+${u.stoneCost} Stone`;
+        costHtml = `${formatCost(u.woodCost)} 🌳<br>${formatCost(u.stoneCost)} 🗻`;
+    } else if (u.currency === 'tri-mixed') {
+        costHtml = `${formatCost(u.woodCost)} 🌳<br>${formatCost(u.foodCost)} 🌾<br>${formatCost(u.stoneCost)} 🗻`;
     } else if (u.currency === 'food') {
-        costHtml = `▶ ${u.cost()} FOOD`;
+        costHtml = `${formatCost(u.cost())} 🌾`;
     } else {
-        costHtml = `▶ ${u.cost()} WOOD`;
+        costHtml = `${formatCost(u.cost())} 🌳`;
     }
 
     el.innerHTML = `
@@ -1332,17 +1360,20 @@ function syncPanel() {
             if (u.currency === 'wood') {
                 const c = u.cost();
                 afford   = game.wood >= c;
-                costText = `▶ ${c} WOOD`;
+                costText = `${formatCost(c)} 🌳`;
             } else if (u.currency === 'food') {
                 const c = u.cost();
                 afford   = game.food >= c;
-                costText = `▶ ${c} FOOD`;
+                costText = `${formatCost(c)} 🌾`;
             } else if (u.currency === 'mixed') {
                 afford   = game.wood >= u.woodCost && game.food >= u.foodCost;
-                costText = `▶ ${u.woodCost}W+${u.foodCost}F`;
+                costText = `${formatCost(u.woodCost)} 🌳<br>${formatCost(u.foodCost)} 🌾`;
             } else if (u.currency === 'stone-mixed') {
                 afford   = game.wood >= u.woodCost && game.stone >= u.stoneCost;
-                costText = `▶ ${u.woodCost}W+${u.stoneCost} Stone`;
+                costText = `${formatCost(u.woodCost)} 🌳<br>${formatCost(u.stoneCost)} 🗻`;
+            } else if (u.currency === 'tri-mixed') {
+                afford   = game.wood >= u.woodCost && game.food >= u.foodCost && game.stone >= u.stoneCost;
+                costText = `${formatCost(u.woodCost)} 🌳<br>${formatCost(u.foodCost)} 🌾<br>${formatCost(u.stoneCost)} 🗻`;
             }
         }
 
@@ -1351,7 +1382,7 @@ function syncPanel() {
         el.className = 'upg-card ' + (atMax ? 'maxed' : afford ? 'affordable' : 'broke');
 
         const costEl = document.getElementById(`upg-cost-${i}`);
-        if (costEl && !atMax && costText) costEl.textContent = costText;
+        if (costEl && !atMax && costText) costEl.innerHTML = costText;
     }
 }
 
@@ -1375,6 +1406,11 @@ function buyUpgrade(idx) {
     } else if (u.currency === 'stone-mixed') {
         if (game.wood < u.woodCost || game.stone < u.stoneCost) return;
         game.wood -= u.woodCost;
+        game.stone -= u.stoneCost;
+    } else if (u.currency === 'tri-mixed') {
+        if (game.wood < u.woodCost || game.food < u.foodCost || game.stone < u.stoneCost) return;
+        game.wood  -= u.woodCost;
+        game.food  -= u.foodCost;
         game.stone -= u.stoneCost;
     }
 
@@ -1575,26 +1611,17 @@ function drawPlot(plot, plotX, plotW, plotTop, maxStalkH, ts) {
 }
 
 function drawFarmScene(ts) {
-    // ── Sky ──
-    const skyH = Math.round(H * 0.38);
-    const skyGrad = ctx.createLinearGradient(0, 0, 0, skyH);
-    skyGrad.addColorStop(0, '#3870b8');
-    skyGrad.addColorStop(1, '#68a8e0');
-    ctx.fillStyle = skyGrad;
-    ctx.fillRect(0, 0, W, skyH);
+    // ── Shared sky background (same as Forest tab) ──
+    drawBackground(ts);
 
-    // Clouds
-    ctx.globalAlpha = 0.55;
-    ctx.fillStyle = '#e8f4ff';
-    ctx.beginPath();
-    ctx.ellipse(Math.round(W * 0.22), Math.round(skyH * 0.35), 38, 14, 0, 0, Math.PI * 2);
-    ctx.ellipse(Math.round(W * 0.24), Math.round(skyH * 0.28), 26, 16, 0, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.beginPath();
-    ctx.ellipse(Math.round(W * 0.68), Math.round(skyH * 0.45), 44, 12, 0, 0, Math.PI * 2);
-    ctx.ellipse(Math.round(W * 0.70), Math.round(skyH * 0.36), 28, 15, 0, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.globalAlpha = 1;
+    // ── Overlay: darken the lower portion to blend into farm ground ──
+    const skyH = Math.round(H * 0.32);  // farm horizon — lower sky, more field
+    const fadeH = Math.round(H * 0.10);
+    const fadeGrad = ctx.createLinearGradient(0, skyH - fadeH, 0, skyH + fadeH);
+    fadeGrad.addColorStop(0, 'rgba(40,20,8,0)');
+    fadeGrad.addColorStop(1, 'rgba(40,20,8,1)');
+    ctx.fillStyle = fadeGrad;
+    ctx.fillRect(0, skyH - fadeH, W, fadeH * 2);
 
     // ── Hedgerow horizon ──
     ctx.fillStyle = '#2a5c18';
@@ -1724,7 +1751,7 @@ function drawFarmScene(ts) {
 
     // ── Draw all plots ──
     const plotTop   = groundY + Math.round(H * 0.02);
-    const maxStalkH = Math.round(H * 0.36);
+    const maxStalkH = Math.round(H * 0.52);
     const layout    = getPlotLayout();
 
     for (let i = 0; i < game.farm.plots.length; i++) {
@@ -1804,7 +1831,8 @@ function drawFarmSwipes(plotTop, maxStalkH) {
 //  MINE MECHANICS
 // ═══════════════════════════════════════════════════════════════
 const MINE_ROCK_CLICKS = 20;
-const MINE_CART_MAX    = 5;
+const MINE_CART_MAX    = 5;  // base capacity
+function getCartMax() { return MINE_CART_MAX + (UPGRADES[15] ? UPGRADES[15].level : 0); }
 
 function getMineRockBounds() {
     const rW = Math.round(W * 0.40);
@@ -1851,7 +1879,7 @@ function mineRockTap(mx, my) {
     if (rock.clicks >= MINE_ROCK_CLICKS) {
         rock.clicks = 0;
         rock.respawnTimer = 5000;
-        if (game.mine.cart.stones < MINE_CART_MAX) {
+        if (game.mine.cart.stones < getCartMax()) {
             game.mine.cart.stones++;
             spawnFloat(b.cx, b.y - 28, '+1 STONE', '#a0b8c8', 18);
         } else {
@@ -2010,10 +2038,11 @@ function drawMineScene(ts) {
 
             // Stone slots
             const stonesNow  = cart.stones;
-            const slotW      = Math.round((cartHW * 2 - 10) / MINE_CART_MAX);
+            const cartMax    = getCartMax();
+            const slotW      = Math.round((cartHW * 2 - 10) / cartMax);
             const slotH      = Math.round(cartBH * 0.48);
             const slotStartY = bodyTop + Math.round(cartBH * 0.28);
-            for (let s = 0; s < MINE_CART_MAX; s++) {
+            for (let s = 0; s < cartMax; s++) {
                 const slotX = bodyL + 5 + s * slotW;
                 if (s < stonesNow) {
                     ctx.fillStyle = '#686058';
@@ -2032,8 +2061,8 @@ function drawMineScene(ts) {
             const lblSize = Math.max(9, Math.round(H * 0.028));
             ctx.font      = `bold ${lblSize}px 'Courier New'`;
             ctx.textAlign = 'center';
-            ctx.fillStyle = stonesNow >= MINE_CART_MAX ? '#e05050' : '#c8b880';
-            ctx.fillText(`${stonesNow}/${MINE_CART_MAX}`, cartCX, bodyTop - 4);
+            ctx.fillStyle = stonesNow >= cartMax ? '#e05050' : '#c8b880';
+            ctx.fillText(`${stonesNow}/${cartMax}`, cartCX, bodyTop - 4);
 
             // SEND CART button (only when idle with at least 1 stone)
             if (cart.state === 'idle') {
@@ -2258,7 +2287,6 @@ function loop(ts) {
                 // Roll fruit chance
                 const fc = getFruitChance();
                 if (fc > 0 && Math.random() < fc) tree.hasFruit = true;
-                if (activeTab === 'wood') spawnFloat(cx, GROUND - TREE_ART[3].length * P - 20, '✦ READY ✦', '#6DC040');
             }
         }
 
@@ -2527,7 +2555,6 @@ canvas.addEventListener('mousemove', (e) => {
 //  SAVE / LOAD
 // ═══════════════════════════════════════════════════════════════
 const SAVE_KEY = 'woodland_save_v2';
-let saveIndicatorTimeout = null;
 
 function saveGame() {
     try {
@@ -2552,11 +2579,6 @@ function saveGame() {
             stone: game.stone,
         };
         localStorage.setItem(SAVE_KEY, JSON.stringify(data));
-
-        const el = document.getElementById('save-indicator');
-        el.classList.add('show');
-        clearTimeout(saveIndicatorTimeout);
-        saveIndicatorTimeout = setTimeout(() => el.classList.remove('show'), 1200);
     } catch(e) {}
 }
 
@@ -2616,7 +2638,7 @@ function loadGame() {
         if (UPGRADES[7].level > 0) {
             document.getElementById('tab-farm-btn').style.display = '';
         }
-        if (UPGRADES[15].level > 0) {
+        if (UPGRADES[16].level > 0) {
             document.getElementById('tab-mine-btn').style.display = '';
         }
         if (UPGRADES[4].level > 0 || game.food > 0) {
@@ -2675,6 +2697,16 @@ function startGame() {
         matchFarmTabHeight();
         requestAnimationFrame(loop);
     });
+}
+
+function devUnlockMine() {
+    UPGRADES[16].level = 1;
+    const mineBtn = document.getElementById('tab-mine-btn');
+    mineBtn.style.display = '';
+    mineBtn.classList.add('new');
+    for (let i = 0; i < UPGRADES.length; i++) buildCard(i);
+    syncPanel();
+    saveGame();
 }
 
 let devMaxUsed = false;
