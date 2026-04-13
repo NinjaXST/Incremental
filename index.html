@@ -915,7 +915,7 @@ const UPGRADES = [
         id: 'brickeff', name: 'BRICK CUTTING EFFICIENCY', maxLevel: 10, level: 0,
         currency: 'stone-mixed',
         get woodCost()  { return Math.round(100000 * Math.pow(1.2, this.level) / 10000) * 10000; },
-        get stoneCost() { const costs = [5, 7, 10, 14, 19, 26, 35, 48, 65, 88]; return costs[this.level] ?? 88; },
+        get stoneCost() { const costs = [4, 7, 10, 14, 19, 26, 35, 48, 65, 88]; return costs[this.level] ?? 88; },
         cost() { return this.woodCost; },
         multiplier() { return Math.pow(1.25, this.level); },
         effectText() {
@@ -991,6 +991,8 @@ function makeMine() {
         buddyLoadAccum: 0,
         buddySparkTimer: 0,
         buddySendAccum: 0,
+        firstLoadDone: false,
+        firstBonusTimer: 0,
     };
 }
 
@@ -2064,8 +2066,16 @@ function loadRockIntoCart() {
     rock.loaded       = false;
     rock.clicks       = 0;
     rock.respawnTimer = getRockRespawnTime();
-    cart.stones++;
-    spawnFloat(b.cx, b.y - 28, 'LOADED!', '#a0b8c8', 18);
+
+    if (!game.mine.firstLoadDone) {
+        game.mine.firstLoadDone  = true;
+        game.mine.firstBonusTimer = 2800;
+        const bonus = Math.min(5, getCartMax() - cart.stones);
+        cart.stones += bonus;
+    } else {
+        cart.stones++;
+        spawnFloat(b.cx, b.y - 28, 'LOADED!', '#a0b8c8', 18);
+    }
     saveGame();
 }
 
@@ -2526,6 +2536,45 @@ function drawMineScene(ts) {
         }
     }
 
+    // ── First-load bonus glow overlay ──
+    if (game.mine.firstBonusTimer > 0) {
+        const frac  = game.mine.firstBonusTimer / 2800;
+        // Fade in quickly, hold, then fade out in last 20%
+        const alpha = frac < 0.2 ? frac / 0.2 : 1;
+        const pulse = Math.abs(Math.sin(frac * Math.PI * 6));
+        ctx.fillStyle = `rgba(255, 220, 40, ${frac * pulse * 0.30})`;
+        ctx.fillRect(0, 0, W, H);
+        const b = getMineRockBounds();
+        const ringR = Math.round(b.w * (0.6 + (1 - frac) * 1.2));
+        ctx.strokeStyle = `rgba(255, 200, 0, ${frac * 0.7})`;
+        ctx.lineWidth = Math.max(2, Math.round(6 * frac));
+        ctx.beginPath();
+        ctx.arc(b.cx, b.cy, ringR, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.lineWidth = 1;
+
+        // Static centred text — positioned in visible screen space
+        // Inside drawMineScene, canvas is translated by (displayH - mineH),
+        // so to hit screen-y sy, use mine-y = sy + mineH - displayH
+        const cx    = Math.round(W / 2);
+        const screenCY = Math.round(displayH * 0.42);
+        const cy    = screenCY + mineH - displayH;
+        const sz1   = Math.max(13, Math.round(W * 0.048));
+        const sz2   = Math.max(16, Math.round(W * 0.065));
+        ctx.textAlign   = 'center';
+        ctx.globalAlpha = alpha;
+        ctx.fillStyle   = 'rgba(0,0,0,0.45)';
+        ctx.fillRect(cx - Math.round(W * 0.42), cy - sz1 - 4, Math.round(W * 0.84), sz1 + sz2 + 22);
+        ctx.font        = `900 ${sz1}px 'Courier New'`;
+        ctx.fillStyle   = '#ffe060';
+        ctx.fillText('✦ FIRST LOAD BONUS ✦', cx, cy);
+        ctx.font        = `900 ${sz2}px 'Courier New'`;
+        ctx.fillStyle   = '#ffcc00';
+        ctx.fillText('×5 STONES!', cx, cy + sz2 + 8);
+        ctx.globalAlpha = 1;
+        ctx.textAlign   = 'left';
+    }
+
     drawFloats();
 }
 
@@ -2646,6 +2695,9 @@ function loop(ts) {
         if (farmSwipes[i].life <= 0) farmSwipes.splice(i, 1);
     }
 
+    // Mine first-bonus glow timer
+    if (game.mine.firstBonusTimer > 0) game.mine.firstBonusTimer = Math.max(0, game.mine.firstBonusTimer - dt);
+
     // Mine rock shake / respawn
     if (game.mine.rock.shakeTimer > 0) {
         game.mine.rock.shakeTimer -= dt;
@@ -2720,6 +2772,7 @@ function loop(ts) {
             game.mine.buddyLoadAccum = 0;
         }
         if (game.mine.buddySparkTimer > 0) game.mine.buddySparkTimer = Math.max(0, game.mine.buddySparkTimer - dt);
+
 
         // Auto-send cart when full
         const cart = game.mine.cart;
