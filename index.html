@@ -144,6 +144,45 @@
         .upg-card.affordable:active { background: #130d06; }
         .upg-card.broke { cursor: default; }
         .upg-card.maxed { cursor: default; opacity: 0.45; }
+        .city-pay-btn {
+            font-family: 'Courier New', monospace;
+            font-size: clamp(10px, 2.8vw, 13px);
+            font-weight: 900;
+            letter-spacing: 0.3px;
+            text-align: center;
+            padding: 4px 2px;
+            border: 1px solid #3a2010;
+            background: #0d0d06;
+            cursor: pointer;
+            transition: background 0.1s;
+        }
+        .city-pay-btn.can-afford { color: #6DC040; border-color: #3a6020; background: #0d1808; }
+        .city-pay-btn.cant-afford { color: #4a3520; border-color: #2a1508; cursor: default; }
+        .city-pay-btn.paid { color: #888; border-color: #333; background: #0a0a0a; cursor: default; text-decoration: line-through; }
+        .city-pay-btn.can-afford:hover { background: #122010; }
+        .complete-village-btn {
+            position: relative;
+            overflow: hidden;
+            padding: 8px 2px;
+        }
+        .complete-village-fill {
+            position: absolute;
+            left: 0; top: 0; bottom: 0;
+            width: 0%;
+            background: rgba(109, 192, 64, 0.35);
+            pointer-events: none;
+        }
+        .complete-village-btn span { position: relative; z-index: 1; }
+
+        .upg-card.prestige {
+            border: 3px solid #ffd040 !important;
+            background: rgba(55, 33, 2, 0.85);
+        }
+        .upg-card.prestige .upg-name {
+            text-align: center;
+            letter-spacing: 1.5px;
+            color: #e03030;
+        }
 
         .upg-name {
             color: #c8a450;
@@ -446,7 +485,7 @@
                     <div id="upg-20" class="upg-card"></div>
                     <div id="upg-23" class="upg-card"></div>
                     <div id="upg-21" class="upg-card"></div>
-                    <div id="upg-19" class="upg-card"></div>
+                    <div id="upg-19" class="upg-card prestige"></div>
                 </div>
             </div>
         </div>
@@ -823,7 +862,7 @@ const UPGRADES = [
         id: 'mine', name: 'MINING EXPEDITION', maxLevel: 1, level: 0,
         currency: 'mixed',
         get woodCost() { return 50000; },
-        get foodCost()  { return 5000; },
+        get foodCost()  { return 10000; },
         cost() { return this.woodCost; },
         effectText() {
             if (this.level >= this.maxLevel) return 'Mine: Open';
@@ -879,15 +918,15 @@ const UPGRADES = [
     },
     // 19 – Build City (prestige-style, currently no effect)
     {
-        id: 'buildcity', name: 'BUILD CITY', maxLevel: 1, level: 0,
+        id: 'buildcity', name: 'BUILD VILLAGE', maxLevel: 1, level: 0,
         currency: 'tri-mixed',
         get woodCost()  { return 500000; },
         get foodCost()  { return 250000; },
-        get stoneCost() { return 750; },
+        get stoneCost() { return 500; },
         cost() { return this.woodCost; },
         effectText() {
             if (this.level >= this.maxLevel) return 'City\nFounded';
-            return 'Found a\nCity';
+            return '';
         },
     },
     // 22 – Stone Irrigation (mine upgrade, boosts all food yields)
@@ -919,11 +958,11 @@ const UPGRADES = [
         get stoneCost() { const costs = [15, 30, 41, 56, 75]; return costs[this.level] ?? 75; },
         cost() { return this.foodCost; },
         effectText() {
-            if (this.level === 0) return `Picks/Loads/Sends\nevery 3.0s`;
+            if (this.level === 0) return `Auto-helps\nevery 3.0s`;
             const cur = (3.5 - this.level * 0.5).toFixed(1);
-            if (this.level >= this.maxLevel) return `Picks/Loads/Sends\nevery ${cur}s`;
+            if (this.level >= this.maxLevel) return `Auto-helps\nevery ${cur}s`;
             const nxt = (3.5 - (this.level + 1) * 0.5).toFixed(1);
-            return `Picks/Loads/Sends\nevery ${cur}s → ${nxt}s`;
+            return `Auto-helps\nevery ${cur}s → ${nxt}s`;
         },
     },
     // 20 – Brick Cutting Efficiency (mine upgrade)
@@ -1009,6 +1048,7 @@ function makeMine() {
         buddySendAccum: 0,
         firstLoadDone: false,
         firstBonusTimer: 0,
+        cityPaid: { wood: false, food: false, stone: false },
     };
 }
 
@@ -1492,15 +1532,74 @@ function buildCard(i) {
         costHtml = `${formatCost(u.cost())} 🌳`;
     }
 
-    el.innerHTML = `
-        <div class="upg-name">${u.name}</div>
-        <div class="upg-effect">${lines[0]}${lines[1] ? `<br><span class="upg-next">${lines[1]}</span>` : ''}</div>
+    if (u.id === 'buildcity') {
+        if (atMax) {
+            el.innerHTML = `<div class="upg-name">${u.name}</div><div class="upg-effect">Village<br>Built</div>`;
+        } else {
+            const paid = game.mine.cityPaid;
+            const allPaid = paid.wood && paid.food && paid.stone;
+            if (allPaid) {
+                el.innerHTML = `
+                    <div class="upg-name">${u.name}</div>
+                    <div class="upg-effect"></div>
+                    <div class="city-pay-btn can-afford complete-village-btn"><div class="complete-village-fill"></div><span>HOLD TO COMPLETE</span></div>`;
+                const cvBtn = el.querySelector('.complete-village-btn');
+                let holdTimer = null;
+                const cancelHold = () => {
+                    if (holdTimer) { clearInterval(holdTimer); holdTimer = null; }
+                    const fill = cvBtn.querySelector('.complete-village-fill');
+                    if (fill) fill.style.width = '0%';
+                };
+                cvBtn.addEventListener('pointerdown', e => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    const fill = cvBtn.querySelector('.complete-village-fill');
+                    const start = performance.now();
+                    holdTimer = setInterval(() => {
+                        const pct = Math.min((performance.now() - start) / 5000, 1);
+                        fill.style.width = (pct * 100) + '%';
+                        if (pct >= 1) { clearInterval(holdTimer); holdTimer = null; completeVillage(); }
+                    }, 16);
+                });
+                cvBtn.addEventListener('pointerup',     e => { e.stopPropagation(); cancelHold(); });
+                cvBtn.addEventListener('pointerleave',  e => { e.stopPropagation(); cancelHold(); });
+                cvBtn.addEventListener('pointercancel', e => { e.stopPropagation(); cancelHold(); });
+            } else {
+                const mkBtn = (res, cost, icon) => {
+                    const isPaid = paid[res];
+                    const canAfford = devFree || (res === 'wood' ? game.wood >= cost : res === 'food' ? game.food >= cost : game.stone >= cost);
+                    const cls = isPaid ? 'paid' : canAfford ? 'can-afford' : 'cant-afford';
+                    const label = isPaid ? `✓ ${formatCost(cost)} ${icon}` : `${formatCost(cost)} ${icon}`;
+                    return `<div class="city-pay-btn ${cls}" data-res="${res}">${label}</div>`;
+                };
+                el.innerHTML = `
+                    <div class="upg-name">${u.name}</div>
+                    <div class="upg-effect"></div>
+                    ${mkBtn('wood',  u.woodCost,  '🌳')}
+                    ${mkBtn('food',  u.foodCost,  '🌾')}
+                    ${mkBtn('stone', u.stoneCost, '🗻')}`;
+                el.querySelectorAll('.city-pay-btn').forEach(btn => {
+                    btn.addEventListener('click', e => {
+                        e.stopPropagation();
+                        payCityResource(btn.dataset.res);
+                    });
+                });
+            }
+        }
+        return;
+    }
+
+    const lvlBarHtml = `
         <div class="upg-lvl-row">
             <div class="upg-lvlbar-bg">
                 <div class="upg-lvlbar-fill" style="width:${pct}%"></div>
             </div>
             <div class="upg-lvl-text">${atMax ? 'MAX' : `${u.level}/${u.maxLevel}`}</div>
-        </div>
+        </div>`;
+    el.innerHTML = `
+        <div class="upg-name">${u.name}</div>
+        <div class="upg-effect">${lines[0]}${lines[1] ? `<br><span class="upg-next">${lines[1]}</span>` : ''}</div>
+        ${lvlBarHtml}
         <div class="upg-cost-row" id="upg-cost-${i}">${costHtml}</div>`;
 }
 
@@ -1553,15 +1652,56 @@ function syncPanel() {
 
         const el = document.getElementById(`upg-${i}`);
         if (!el) continue;
-        el.className = 'upg-card ' + (atMax ? 'maxed' : afford ? 'affordable' : 'broke');
+        const extraClass = u.id === 'buildcity' ? ' prestige' : '';
+        const stateClass = atMax ? 'maxed' : (afford || u.id === 'buildcity') ? 'affordable' : 'broke';
+        el.className = 'upg-card ' + stateClass + extraClass;
 
         const costEl = document.getElementById(`upg-cost-${i}`);
         if (costEl && !atMax && costText) costEl.innerHTML = costText;
     }
 }
 
+function payCityResource(resource) {
+    const u = UPGRADES[19];
+    if (u.level >= u.maxLevel) return;
+    const paid = game.mine.cityPaid;
+    if (paid[resource]) return;
+
+    if (!devFree) {
+        if (resource === 'wood') {
+            if (game.wood < u.woodCost) return;
+            game.wood -= u.woodCost;
+        } else if (resource === 'food') {
+            if (game.food < u.foodCost) return;
+            game.food -= u.foodCost;
+        } else if (resource === 'stone') {
+            if (game.stone < u.stoneCost) return;
+            game.stone -= u.stoneCost;
+        }
+    }
+    paid[resource] = true;
+
+    buildCard(19);
+    syncPanel();
+    updateHUD();
+    saveGame();
+}
+
+function completeVillage() {
+    const u = UPGRADES[19];
+    if (u.level >= u.maxLevel) return;
+    u.level++;
+    game.mine.cityPaid = { wood: false, food: false, stone: false };
+    spawnFloat(W / 2, H * 0.3, '✦ VILLAGE BUILT ✦', '#ffd040', 28);
+    for (let i = 0; i < UPGRADES.length; i++) buildCard(i);
+    syncPanel();
+    updateHUD();
+    saveGame();
+}
+
 function buyUpgrade(idx) {
     const u = UPGRADES[idx];
+    if (u.id === 'buildcity') return;
     if (u.level >= u.maxLevel) return;
 
     // Check & deduct cost
@@ -2997,6 +3137,9 @@ function saveGame() {
                 buddyLoadAccum: game.mine.buddyLoadAccum,
                 buddySendAccum: game.mine.buddySendAccum,
                 firstLoadDone: game.mine.firstLoadDone,
+                cityPaidWood:  game.mine.cityPaid.wood,
+                cityPaidFood:  game.mine.cityPaid.food,
+                cityPaidStone: game.mine.cityPaid.stone,
             },
             stone: game.stone,
         };
@@ -3056,6 +3199,9 @@ function loadGame() {
             if (typeof data.mine.buddyLoadAccum === 'number') game.mine.buddyLoadAccum = data.mine.buddyLoadAccum;
             if (typeof data.mine.buddySendAccum === 'number') game.mine.buddySendAccum = data.mine.buddySendAccum;
             if (typeof data.mine.firstLoadDone === 'boolean') game.mine.firstLoadDone = data.mine.firstLoadDone;
+            if (typeof data.mine.cityPaidWood  === 'boolean') game.mine.cityPaid.wood  = data.mine.cityPaidWood;
+            if (typeof data.mine.cityPaidFood  === 'boolean') game.mine.cityPaid.food  = data.mine.cityPaidFood;
+            if (typeof data.mine.cityPaidStone === 'boolean') game.mine.cityPaid.stone = data.mine.cityPaidStone;
             // Snap 'leaving' to 'depositing' on reload (animation already happened)
             if (game.mine.cart.state === 'leaving') { game.mine.cart.state = 'depositing'; game.mine.cart.timer = getCartTripTime(); game.mine.cart.travelX = 0; }
         }
