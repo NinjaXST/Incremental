@@ -255,6 +255,79 @@
         }
         #tab-mine.active { display: flex; }
 
+        /* ── Village tab ── */
+        #tab-village {
+            display: none;
+            flex-direction: column;
+            flex: 1;
+        }
+        #tab-village.active { display: flex; }
+        .village-idle-row {
+            color: #c8a450;
+            font-size: clamp(10px, 2.6vw, 13px);
+            font-weight: 900;
+            letter-spacing: 3px;
+            text-align: center;
+            padding: 5px 0;
+            border-bottom: 1px solid #1a0d05;
+            background: #0d0a07;
+            flex-shrink: 0;
+        }
+        .worker-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: clamp(5px, 1.5vw, 9px) clamp(8px, 2.5vw, 16px);
+            border-bottom: 1px solid #1a0d05;
+            flex: 1;
+        }
+        .worker-row:last-child { border-bottom: none; }
+        .worker-label {
+            color: #c8a450;
+            font-size: clamp(11px, 2.8vw, 14px);
+            font-weight: 900;
+            letter-spacing: 1px;
+            line-height: 1.5;
+        }
+        .worker-desc {
+            color: #7a9860;
+            font-size: clamp(9px, 2.3vw, 11px);
+            font-weight: bold;
+            letter-spacing: 0px;
+        }
+        .worker-controls {
+            display: flex;
+            align-items: center;
+            gap: clamp(6px, 2vw, 12px);
+        }
+        .worker-btn {
+            width: clamp(26px, 7vw, 34px);
+            height: clamp(26px, 7vw, 34px);
+            background: #100a04;
+            color: #c8a450;
+            border: 1px solid #4a2e10;
+            font-family: 'Courier New', monospace;
+            font-size: clamp(15px, 4vw, 20px);
+            font-weight: 900;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.1s, color 0.1s;
+            line-height: 1;
+            padding: 0;
+        }
+        .worker-btn:hover:not(:disabled) { background: #1a1008; color: #e8c060; }
+        .worker-btn:disabled { color: #2a1808; border-color: #1a0d05; cursor: default; }
+        .worker-count {
+            color: #e8d090;
+            font-size: clamp(14px, 3.5vw, 18px);
+            font-weight: 900;
+            letter-spacing: 2px;
+            min-width: clamp(18px, 5vw, 26px);
+            text-align: center;
+        }
+
         /* ── Save indicator (removed) ──
         #save-indicator {
             position: fixed;
@@ -408,6 +481,64 @@
             border: 2px solid #4a2e10;
         }
         #confirm-no:hover { background: #1a1008; }
+
+        /* ── Village Founded popup ── */
+        #village-founded-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.82);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 300;
+        }
+        #village-founded-overlay.hidden { display: none; }
+        #village-founded-box {
+            background: #0d0a07;
+            border: 2px solid #c8a450;
+            padding: 32px 28px 24px;
+            width: clamp(260px, 82vw, 420px);
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 18px;
+            box-shadow: 0 0 40px rgba(200,164,80,0.18);
+        }
+        #village-founded-title {
+            color: #ffd040;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: clamp(14px, 3.8vw, 18px);
+            font-weight: 900;
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            text-shadow: 0 0 14px #a07820;
+        }
+        #village-founded-msg {
+            color: #c8a450;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: clamp(12px, 3vw, 14px);
+            font-weight: bold;
+            letter-spacing: 0.5px;
+            line-height: 1.75;
+        }
+        #village-founded-ok {
+            font-family: 'Courier New', Courier, monospace;
+            font-weight: 900;
+            letter-spacing: 5px;
+            text-transform: uppercase;
+            border: none;
+            cursor: pointer;
+            width: clamp(120px, 40vw, 180px);
+            padding: 13px 0;
+            font-size: clamp(12px, 3vw, 14px);
+            background: #100a04;
+            color: #c8a450;
+            border: 2px solid #4a2e10;
+            transition: background 0.1s, color 0.1s;
+            margin-top: 4px;
+        }
+        #village-founded-ok:hover { background: #1a1008; color: #e8c060; }
     </style>
 </head>
 <body>
@@ -419,6 +550,15 @@
             <div id="title-tagline">Build your medieval empire</div>
             <button class="title-btn" id="btn-resume">&#9658; Resume Game</button>
             <button class="title-btn" id="btn-new">&#9658; New Game</button>
+        </div>
+    </div>
+
+    <!-- Village Founded popup -->
+    <div id="village-founded-overlay" class="hidden">
+        <div id="village-founded-box">
+            <div id="village-founded-title">✦ Village Founded ✦</div>
+            <div id="village-founded-msg">Congratulations!<br>You have built the foundation for a new village.<br><span style="color:#6DC040;font-weight:900;">3</span> villagers have joined you.<br>Lead your tribe to prosperity.</div>
+            <button id="village-founded-ok">OK</button>
         </div>
     </div>
 
@@ -444,6 +584,7 @@
                 <button class="tab-btn active" id="tab-wood-btn">FOREST</button>
                 <button class="tab-btn" id="tab-farm-btn" style="display:none">FARM</button>
                 <button class="tab-btn" id="tab-mine-btn" style="display:none">MINE</button>
+                <button class="tab-btn" id="tab-village-btn" style="display:none">VILLAGE</button>
             </div>
             <div id="tab-wood">
                 <button id="dev-max-btn" onclick="devMaxAll()" style="display:block;width:100%;padding:4px 0;background:#1a0a0a;color:#ff4040;font-family:'Courier New',monospace;font-size:11px;font-weight:900;letter-spacing:2px;border:1px dashed #ff4040;cursor:pointer;">⚠ DEV: FREE UPGRADES</button>
@@ -473,6 +614,12 @@
                     <div id="upg-16" class="upg-card"></div>
                     <div id="upg-14" class="upg-card"></div>
                 </div>
+            </div>
+            <div id="tab-village">
+                <div class="village-idle-row" id="village-idle-row">👥 0 idle / 0 total</div>
+                <div class="worker-row" id="village-worker-foresters"></div>
+                <div class="worker-row" id="village-worker-farmers"></div>
+                <div class="worker-row" id="village-worker-miners"></div>
             </div>
             <div id="tab-mine">
                 <div class="cards-row">
@@ -839,12 +986,12 @@ const UPGRADES = [
         id: 'cartcap', name: 'CARGO SPACE', maxLevel: 5, level: 0,
         currency: 'tri-mixed',
         get woodCost()  {
-            const fibs = [1, 1, 2, 3, 5];
-            return Math.ceil(20000 * fibs[this.level]);
+            const fibs = [1, 2, 3, 5, 8];
+            return Math.ceil(100000 * fibs[this.level]);
         },
         get foodCost()  {
-            const fibs = [1, 1, 2, 3, 5];
-            return Math.ceil(1000 * fibs[this.level]);
+            const fibs = [1, 2, 3, 5, 8];
+            return Math.ceil(25000 * fibs[this.level]);
         },
         get stoneCost() {
             const costs = [2, 3, 5, 7, 10];
@@ -1054,6 +1201,10 @@ function makeMine() {
 
 const game = {
     wood: 0, food: 0, stone: 0,
+    phase: 'forest',
+    population: 0,
+    workers: { foresters: 0, farmers: 0, miners: 0 },
+    workerAccum: { wood: 0, food: 0, stone: 0 },
     trees: [makeTree()],
     firstChopDone: false, lodgeAccum: 0, windmillAccum: 0,
     farm: { plots: [makePlot()] },
@@ -1078,8 +1229,8 @@ function spawnChips(x, y) {
 }
 
 const floats = [];
-function spawnFloat(x, y, text, color, size) {
-    floats.push({ x, y, text, color, life: 1, size: size || 13 });
+function spawnFloat(x, y, text, color, size, holdMs) {
+    floats.push({ x, y, text, color, life: 1, size: size || 13, hold: holdMs || 0 });
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -1256,14 +1407,16 @@ function drawBackground(ts) {
         }
     }
 
-    // Background silhouette trees — skip cabin zone when lodge active
-    const cabinZoneX = UPGRADES[5].level > 0 ? Math.round(W * 0.73) : W + 1;
-    const treeCol = dl < 0.3 ? '#101810' : '#182818';
-    ctx.fillStyle = treeCol;
-    for (const bt of BG_TREES) {
-        if (bt.x >= cabinZoneX) continue;
-        ctx.fillRect(bt.x - 13, GROUND - bt.h, 26, bt.h - 10);
-        ctx.fillRect(bt.x - 3,  GROUND - 11,   6,  11);
+    // Background silhouette trees — forest phase only, skip cabin zone when lodge active
+    if (game.phase !== 'village') {
+        const cabinZoneX = UPGRADES[5].level > 0 ? Math.round(W * 0.73) : W + 1;
+        const treeCol = dl < 0.3 ? '#101810' : '#182818';
+        ctx.fillStyle = treeCol;
+        for (const bt of BG_TREES) {
+            if (bt.x >= cabinZoneX) continue;
+            ctx.fillRect(bt.x - 13, GROUND - bt.h, 26, bt.h - 10);
+            ctx.fillRect(bt.x - 3,  GROUND - 11,   6,  11);
+        }
     }
 
     const gndTop = dl > 0.5 ? '#3a2010' : '#2a1a0a';
@@ -1287,7 +1440,7 @@ function drawBackground(ts) {
 }
 
 function drawCabin(ts) {
-    if (UPGRADES[5].level === 0) return;
+    if (UPGRADES[5].level === 0 && game.phase !== 'village') return;
 
     const cabinStartX = Math.round(W * 0.75);
     const cabinW      = Math.round(W * 0.22);
@@ -1374,13 +1527,157 @@ function drawCabin(ts) {
     ctx.fillRect(winX, winY + Math.round(winSize / 2) - 1, winSize, 2);
     ctx.fillRect(winX + Math.round(winSize / 2) - 1, winY, 2, winSize);
 
-    // Lodge level badge
-    const lvl = UPGRADES[5].level;
-    const fSize = Math.max(9, Math.round(cabinW * 0.13));
-    ctx.fillStyle = '#c8a450';
-    ctx.font = `bold ${fSize}px "Courier New"`;
-    ctx.textAlign = 'center';
-    ctx.fillText(`LVL ${lvl}`, cabinStartX + cabinW / 2, wallTopY - Math.round(cabinW * 0.42));
+    // Lodge level badge (forest phase only)
+    if (game.phase !== 'village') {
+        const lvl = UPGRADES[5].level;
+        const fSize = Math.max(9, Math.round(cabinW * 0.13));
+        ctx.fillStyle = '#c8a450';
+        ctx.font = `bold ${fSize}px "Courier New"`;
+        ctx.textAlign = 'center';
+        ctx.fillText(`LVL ${lvl}`, cabinStartX + cabinW / 2, wallTopY - Math.round(cabinW * 0.42));
+    }
+}
+
+function drawVillageHouse(ts) {
+    const houseW  = Math.round(W * 0.17);
+    const houseH  = Math.round(houseW * 0.72);
+    const houseX  = Math.round(W * 0.72);
+    const baseY   = GROUND;
+    const foundH  = Math.max(4, Math.round(houseH * 0.13));
+    const wallH   = houseH - foundH;
+    const wallTopY = baseY - houseH;
+    const beamH   = Math.max(2, Math.round(houseW * 0.055));
+
+    // Stone foundation
+    ctx.fillStyle = '#7a6448';
+    ctx.fillRect(houseX, baseY - foundH, houseW, foundH);
+    ctx.fillStyle = '#5a4830';
+    for (let r = 0; r < 2; r++) {
+        ctx.fillRect(houseX, baseY - foundH + r * Math.round(foundH / 2), houseW, 1);
+    }
+    // Stone block joints
+    ctx.fillStyle = '#4a3820';
+    const brickW = Math.round(houseW / 4);
+    for (let b = 0; b < 4; b++) {
+        ctx.fillRect(houseX + b * brickW, baseY - foundH, 1, foundH);
+    }
+
+    // Plaster walls (warm cream)
+    ctx.fillStyle = '#c8b078';
+    ctx.fillRect(houseX, wallTopY, houseW, wallH);
+
+    // Timber frame — corner posts
+    ctx.fillStyle = '#7a5028';
+    ctx.fillRect(houseX,                  wallTopY, beamH,  wallH);
+    ctx.fillRect(houseX + houseW - beamH, wallTopY, beamH,  wallH);
+    // Top and bottom beams
+    ctx.fillRect(houseX, wallTopY,              houseW, beamH);
+    ctx.fillRect(houseX, baseY - foundH - beamH, houseW, beamH);
+    // Diagonal brace (left panel)
+    ctx.fillStyle = '#6a4020';
+    const midX = houseX + Math.round(houseW * 0.5);
+    ctx.fillRect(midX - Math.round(beamH / 2), wallTopY, beamH, wallH);
+
+    // Chimney (left side, before roof so roof overlaps base)
+    const chimneyW  = Math.max(5, Math.round(houseW * 0.12));
+    const chimneyX  = houseX + Math.round(houseW * 0.18);
+    const peakX     = houseX + Math.round(houseW / 2);
+    const peakY     = wallTopY - Math.round(houseW * 0.42);
+    const roofLx    = houseX - 3;
+    const slopeLeft = (wallTopY - peakY) / (roofLx - peakX);
+    const roofYatCh = Math.round(peakY + slopeLeft * (chimneyX + chimneyW / 2 - peakX));
+    const chimneyTop = roofYatCh - Math.round(houseW * 0.13);
+    ctx.fillStyle = '#5a4030';
+    ctx.fillRect(chimneyX, chimneyTop, chimneyW, baseY - chimneyTop);
+    // Chimney cap
+    ctx.fillStyle = '#3a2818';
+    ctx.fillRect(chimneyX - 1, chimneyTop, chimneyW + 2, Math.max(2, Math.round(chimneyW * 0.35)));
+    // Stone texture on chimney
+    ctx.fillStyle = '#4a3428';
+    ctx.fillRect(chimneyX, chimneyTop + Math.round(chimneyW * 0.6), chimneyW, 1);
+    ctx.fillRect(chimneyX, chimneyTop + Math.round(chimneyW * 1.2), chimneyW, 1);
+
+    // Thatched roof
+    ctx.fillStyle = '#7a5818';
+    ctx.beginPath();
+    ctx.moveTo(roofLx,          wallTopY + 2);
+    ctx.lineTo(peakX,           peakY);
+    ctx.lineTo(houseX + houseW + 3, wallTopY + 2);
+    ctx.closePath();
+    ctx.fill();
+    // Thatch layer lines
+    const layers = 4;
+    for (let l = 1; l <= layers; l++) {
+        const t   = l / (layers + 1);
+        const ly  = Math.round(peakY + (wallTopY - peakY) * t);
+        const lxL = Math.round(peakX + (roofLx - peakX) * t) - 2;
+        const lxR = Math.round(peakX + (houseX + houseW + 3 - peakX) * t) + 2;
+        ctx.fillStyle = l % 2 === 0 ? '#9a7028' : '#8a6020';
+        ctx.fillRect(lxL, ly, lxR - lxL, Math.max(2, Math.round(houseW * 0.035)));
+    }
+    // Ridge cap
+    ctx.fillStyle = '#5a3c10';
+    ctx.fillRect(peakX - 2, peakY, 4, Math.round(houseW * 0.09));
+
+    // Smoke
+    const smokeAlpha = 0.20 + 0.10 * Math.sin(ts / 900);
+    ctx.globalAlpha = smokeAlpha;
+    ctx.fillStyle = '#c0b8a8';
+    ctx.beginPath();
+    ctx.arc(chimneyX + chimneyW / 2, chimneyTop - 5, 5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(chimneyX + chimneyW / 2 + 3, chimneyTop - 11, 3.5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.globalAlpha = 1;
+
+    // Door (slightly right of center)
+    const doorW = Math.round(houseW * 0.22);
+    const doorH = Math.round(wallH * 0.50);
+    const doorX = houseX + Math.round((houseW - doorW) / 2) + Math.round(houseW * 0.06);
+    ctx.fillStyle = '#6a3c18';
+    ctx.fillRect(doorX, baseY - foundH - doorH, doorW, doorH);
+    // Door panels
+    ctx.fillStyle = '#4e2c10';
+    const pm = Math.max(2, Math.round(doorW * 0.14));
+    const panelW = doorW - pm * 2;
+    ctx.fillRect(doorX + pm, baseY - foundH - doorH + pm,          panelW, Math.round(doorH * 0.38) - pm);
+    ctx.fillRect(doorX + pm, baseY - foundH - doorH + Math.round(doorH * 0.42), panelW, Math.round(doorH * 0.52) - pm);
+    // Door knob
+    ctx.fillStyle = '#d4a030';
+    ctx.fillRect(doorX + Math.round(doorW * 0.72), baseY - foundH - Math.round(doorH * 0.48), 2, 2);
+    // Door frame
+    ctx.strokeStyle = '#3a2008';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(doorX, baseY - foundH - doorH, doorW, doorH);
+
+    // Windows (one each side of door)
+    const winSize = Math.round(houseW * 0.16);
+    const winY    = wallTopY + beamH + Math.round(wallH * 0.12);
+    // Left window
+    const winXL = houseX + beamH + Math.round((doorX - houseX - beamH - winSize) / 2);
+    ctx.fillStyle = '#e8b830';
+    ctx.fillRect(winXL, winY, winSize, winSize);
+    ctx.fillStyle = '#7a5028';
+    ctx.fillRect(winXL, winY + Math.round(winSize / 2) - 1, winSize, 2);
+    ctx.fillRect(winXL + Math.round(winSize / 2) - 1, winY, 2, winSize);
+    ctx.strokeStyle = '#3a2008'; ctx.lineWidth = 1;
+    ctx.strokeRect(winXL - 1, winY - 1, winSize + 2, winSize + 2);
+    // Right window
+    const winXR = doorX + doorW + Math.round((houseX + houseW - beamH - doorX - doorW - winSize) / 2);
+    ctx.fillStyle = '#e8b830';
+    ctx.fillRect(winXR, winY, winSize, winSize);
+    ctx.fillStyle = '#7a5028';
+    ctx.fillRect(winXR, winY + Math.round(winSize / 2) - 1, winSize, 2);
+    ctx.fillRect(winXR + Math.round(winSize / 2) - 1, winY, 2, winSize);
+    ctx.strokeStyle = '#3a2008'; ctx.lineWidth = 1;
+    ctx.strokeRect(winXR - 1, winY - 1, winSize + 2, winSize + 2);
+}
+
+function drawVillageScene(ts) {
+    drawBackground(ts);
+    drawVillageHouse(ts);
+    drawFloats();
 }
 
 function drawOneTree(ts, cx, tree) {
@@ -1492,11 +1789,11 @@ function drawUI(ts) {
 
 function updateHUD() {
     document.getElementById('woodCount').textContent = formatNum(game.wood);
-    if (UPGRADES[4].level > 0 || game.food > 0) {
+    if (game.phase === 'village' || UPGRADES[4].level > 0 || game.food > 0) {
         document.getElementById('food-hud').classList.remove('hidden');
         document.getElementById('foodCount').textContent = formatNum(game.food);
     }
-    if (game.stone > 0 || UPGRADES[16].level > 0) {
+    if (game.phase === 'village' || game.stone > 0 || UPGRADES[16].level > 0) {
         document.getElementById('stone-hud').classList.remove('hidden');
         document.getElementById('stoneCount').textContent = formatNum(game.stone);
     }
@@ -1505,6 +1802,45 @@ function updateHUD() {
 // ═══════════════════════════════════════════════════════════════
 //  UPGRADE PANEL (DOM)
 // ═══════════════════════════════════════════════════════════════
+function buildVillagePanel() {
+    const idle = game.population - game.workers.foresters - game.workers.farmers - game.workers.miners;
+    const idleEl = document.getElementById('village-idle-row');
+    if (idleEl) idleEl.textContent = `👥 ${idle} idle  /  ${game.population} total`;
+
+    const defs = [
+        { key: 'foresters', label: 'FORESTER', icon: '🌳', baseDesc: '+1 Wood/s',  rateLabel: 'Wood',  elId: 'village-worker-foresters' },
+        { key: 'farmers',   label: 'FARMER',   icon: '🌾', baseDesc: '+1 Food/s',  rateLabel: 'Food',  elId: 'village-worker-farmers'   },
+        { key: 'miners',    label: 'MINER',     icon: '🗻', baseDesc: '+1 Stone/s', rateLabel: 'Stone', elId: 'village-worker-miners'    },
+    ];
+    for (const d of defs) {
+        const el = document.getElementById(d.elId);
+        if (!el) continue;
+        const count = game.workers[d.key];
+        const canAdd = idle > 0;
+        const canSub = count > 0;
+        const desc = count >= 2 ? `+${count} ${d.rateLabel}/s` : d.baseDesc;
+        el.innerHTML = `
+            <div class="worker-label">${d.icon} ${d.label}<br><span class="worker-desc">${desc}</span></div>
+            <div class="worker-controls">
+                <button class="worker-btn" data-role="${d.key}" data-delta="-1" ${canSub ? '' : 'disabled'}>−</button>
+                <span class="worker-count">${count}</span>
+                <button class="worker-btn" data-role="${d.key}" data-delta="1" ${canAdd ? '' : 'disabled'}>+</button>
+            </div>`;
+        el.querySelectorAll('.worker-btn').forEach(btn => {
+            btn.addEventListener('click', () => adjustWorker(btn.dataset.role, parseInt(btn.dataset.delta)));
+        });
+    }
+}
+
+function adjustWorker(role, delta) {
+    const idle = game.population - game.workers.foresters - game.workers.farmers - game.workers.miners;
+    if (delta > 0 && idle <= 0) return;
+    if (delta < 0 && game.workers[role] <= 0) return;
+    game.workers[role] = Math.max(0, game.workers[role] + delta);
+    buildVillagePanel();
+    saveGame();
+}
+
 function buildCard(i) {
     const u     = UPGRADES[i];
     const atMax = u.level >= u.maxLevel;
@@ -1556,7 +1892,7 @@ function buildCard(i) {
                     const fill = cvBtn.querySelector('.complete-village-fill');
                     const start = performance.now();
                     holdTimer = setInterval(() => {
-                        const pct = Math.min((performance.now() - start) / 5000, 1);
+                        const pct = Math.min((performance.now() - start) / 2500, 1);
                         fill.style.width = (pct * 100) + '%';
                         if (pct >= 1) { clearInterval(holdTimer); holdTimer = null; completeVillage(); }
                     }, 16);
@@ -1613,6 +1949,7 @@ function buildPanel() {
     document.getElementById('tab-wood-btn').addEventListener('click', () => switchTab('wood'));
     document.getElementById('tab-farm-btn').addEventListener('click', () => switchTab('farm'));
     document.getElementById('tab-mine-btn').addEventListener('click', () => switchTab('mine'));
+    document.getElementById('tab-village-btn').addEventListener('click', () => switchTab('village'));
     syncPanel();
 }
 
@@ -1692,9 +2029,27 @@ function completeVillage() {
     if (u.level >= u.maxLevel) return;
     u.level++;
     game.mine.cityPaid = { wood: false, food: false, stone: false };
-    spawnFloat(W / 2, H * 0.3, '✦ VILLAGE BUILT ✦', '#ffd040', 28);
-    for (let i = 0; i < UPGRADES.length; i++) buildCard(i);
-    syncPanel();
+
+    // Phase transition
+    game.phase = 'village';
+    game.wood = 0;
+    game.food = 0;
+    game.stone = 0;
+    game.population = 3;
+    game.workers = { foresters: 0, farmers: 0, miners: 0 };
+    game.workerAccum = { wood: 0, food: 0, stone: 0 };
+
+    document.getElementById('tab-wood-btn').style.display = 'none';
+    document.getElementById('tab-farm-btn').style.display = 'none';
+    document.getElementById('tab-mine-btn').style.display = 'none';
+    const villageBtn = document.getElementById('tab-village-btn');
+    villageBtn.style.display = '';
+    villageBtn.classList.add('new');
+
+    document.getElementById('food-hud').classList.remove('hidden');
+    document.getElementById('stone-hud').classList.remove('hidden');
+
+    document.getElementById('village-founded-overlay').classList.remove('hidden');
     updateHUD();
     saveGame();
 }
@@ -1775,6 +2130,7 @@ function switchTab(tab) {
     document.getElementById('tab-wood').classList.toggle('hidden', tab !== 'wood');
     document.getElementById('tab-farm').classList.toggle('active', tab === 'farm');
     document.getElementById('tab-mine').classList.toggle('active', tab === 'mine');
+    document.getElementById('tab-village').classList.toggle('active', tab === 'village');
     document.getElementById('tab-wood-btn').classList.toggle('active', tab === 'wood');
     const farmBtn = document.getElementById('tab-farm-btn');
     farmBtn.classList.toggle('active', tab === 'farm');
@@ -1782,6 +2138,9 @@ function switchTab(tab) {
     const mineBtn = document.getElementById('tab-mine-btn');
     mineBtn.classList.toggle('active', tab === 'mine');
     if (tab === 'mine') mineBtn.classList.remove('new');
+    const villageBtn = document.getElementById('tab-village-btn');
+    villageBtn.classList.toggle('active', tab === 'village');
+    if (tab === 'village') villageBtn.classList.remove('new');
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -2791,9 +3150,9 @@ function loop(ts) {
         }
     }
 
-    // Forester's Lodge auto-chop
+    // Forester's Lodge auto-chop (forest phase only)
     const lodgeCPS = getLodgeCPS();
-    if (lodgeCPS > 0) {
+    if (game.phase === 'forest' && lodgeCPS > 0) {
         game.lodgeAccum += dt * lodgeCPS / 1000;
         while (game.lodgeAccum >= 1) {
             game.lodgeAccum -= 1;
@@ -2813,10 +3172,10 @@ function loop(ts) {
         }
     }
 
-    // Windmill auto-swipe
+    // Windmill auto-swipe (forest phase only)
     const windmillRates = [0, 1/4.5, 1/3.5, 1/2.5, 1/1.5, 1/0.5];  // swipes per second per level
     const windmillSPS = windmillRates[UPGRADES[14].level] || 0;
-    if (windmillSPS > 0) {
+    if (game.phase === 'forest' && windmillSPS > 0) {
         game.windmillAccum += dt * windmillSPS / 1000;
         while (game.windmillAccum >= 1) {
             game.windmillAccum -= 1;
@@ -2841,8 +3200,8 @@ function loop(ts) {
 
     for (let i = floats.length - 1; i >= 0; i--) {
         const f = floats[i];
-        f.y    -= dt * 0.035;
-        f.life -= dt / 1600;
+        if (f.hold > 0) { f.hold -= dt; }
+        else { f.y -= dt * 0.035; f.life -= dt / 1600; }
         if (f.life <= 0) floats.splice(i, 1);
     }
 
@@ -2894,8 +3253,8 @@ function loop(ts) {
         }
     }
 
-    // Mining Buddy auto-pick & auto-load
-    if (UPGRADES[21] && UPGRADES[21].level > 0) {
+    // Mining Buddy auto-pick & auto-load (forest phase only)
+    if (game.phase === 'forest' && UPGRADES[21] && UPGRADES[21].level > 0) {
         const rock = game.mine.rock;
         if (rock.respawnTimer <= 0 && !rock.loaded) {
             // Auto-pick
@@ -2954,8 +3313,24 @@ function loop(ts) {
         }
     }
 
+    // Village worker production
+    if (game.phase === 'village') {
+        game.workerAccum.wood  += dt * game.workers.foresters / 1000;
+        game.workerAccum.food  += dt * game.workers.farmers   / 1000;
+        game.workerAccum.stone += dt * game.workers.miners    / 1000;
+        const gw = Math.floor(game.workerAccum.wood);
+        const gf = Math.floor(game.workerAccum.food);
+        const gs = Math.floor(game.workerAccum.stone);
+        if (gw > 0) { game.wood  += gw; game.workerAccum.wood  -= gw; }
+        if (gf > 0) { game.food  += gf; game.workerAccum.food  -= gf; }
+        if (gs > 0) { game.stone += gs; game.workerAccum.stone -= gs; }
+    }
+
     ctx.clearRect(0, 0, W, displayH);
-    if (activeTab === 'farm') {
+    if (activeTab === 'village') {
+        drawVillageScene(ts);
+        if (ts - lastHudSync >= 200) { updateHUD(); lastHudSync = ts; }
+    } else if (activeTab === 'farm') {
         drawFarmScene(ts);
         if (ts - lastHudSync >= 200) { updateHUD(); syncPanel(); lastHudSync = ts; }
     } else if (activeTab === 'mine') {
@@ -3118,6 +3493,10 @@ function saveGame() {
         const data = {
             wood: game.wood,
             food: game.food,
+            stone: game.stone,
+            phase: game.phase,
+            population: game.population,
+            workers: { ...game.workers },
             firstChopDone: game.firstChopDone,
             upgrades: UPGRADES.map(u => u.level),
             trees: game.trees.map(t => ({
@@ -3141,7 +3520,6 @@ function saveGame() {
                 cityPaidFood:  game.mine.cityPaid.food,
                 cityPaidStone: game.mine.cityPaid.stone,
             },
-            stone: game.stone,
         };
         localStorage.setItem(SAVE_KEY, JSON.stringify(data));
     } catch(e) {}
@@ -3207,15 +3585,35 @@ function loadGame() {
         }
         if (typeof data.stone === 'number' && isFinite(data.stone)) game.stone = data.stone;
 
+        // Restore village state
+        if (data.phase === 'village') {
+            game.phase = 'village';
+            game.population = typeof data.population === 'number' ? data.population : 3;
+            if (data.workers && typeof data.workers === 'object') {
+                game.workers.foresters = data.workers.foresters || 0;
+                game.workers.farmers   = data.workers.farmers   || 0;
+                game.workers.miners    = data.workers.miners    || 0;
+            }
+        }
+
         // Restore UI state
-        if (UPGRADES[7].level > 0) {
-            document.getElementById('tab-farm-btn').style.display = '';
-        }
-        if (UPGRADES[16].level > 0) {
-            document.getElementById('tab-mine-btn').style.display = '';
-        }
-        if (UPGRADES[4].level > 0 || game.food > 0) {
+        if (game.phase === 'village') {
+            document.getElementById('tab-wood-btn').style.display = 'none';
+            document.getElementById('tab-farm-btn').style.display = 'none';
+            document.getElementById('tab-mine-btn').style.display = 'none';
+            document.getElementById('tab-village-btn').style.display = '';
             document.getElementById('food-hud').classList.remove('hidden');
+            document.getElementById('stone-hud').classList.remove('hidden');
+        } else {
+            if (UPGRADES[7].level > 0) {
+                document.getElementById('tab-farm-btn').style.display = '';
+            }
+            if (UPGRADES[16].level > 0) {
+                document.getElementById('tab-mine-btn').style.display = '';
+            }
+            if (UPGRADES[4].level > 0 || game.food > 0) {
+                document.getElementById('food-hud').classList.remove('hidden');
+            }
         }
     } catch(e) {}
 }
@@ -3234,19 +3632,26 @@ function eraseSave() {
 function resetGameState() {
     game.wood          = 0;
     game.food          = 0;
+    game.stone         = 0;
+    game.phase         = 'forest';
+    game.population    = 0;
+    game.workers       = { foresters: 0, farmers: 0, miners: 0 };
+    game.workerAccum   = { wood: 0, food: 0, stone: 0 };
     game.firstChopDone  = false;
     game.lodgeAccum     = 0;
     game.windmillAccum  = 0;
     game.trees         = [makeTree()];
     game.farm          = { plots: [makePlot()] };
     game.mine          = makeMine();
-    game.stone         = 0;
     mineSendCartBtn    = null;
     UPGRADES.forEach(u => u.level = 0);
+    document.getElementById('tab-wood-btn').style.display = '';
     document.getElementById('tab-farm-btn').style.display = 'none';
     document.getElementById('tab-mine-btn').style.display = 'none';
+    document.getElementById('tab-village-btn').style.display = 'none';
     document.getElementById('food-hud').classList.add('hidden');
     document.getElementById('stone-hud').classList.add('hidden');
+    switchTab('wood');
 }
 
 function matchFarmTabHeight() {
@@ -3259,6 +3664,15 @@ function matchFarmTabHeight() {
 function startGame() {
     document.getElementById('title-screen').classList.add('hidden');
     buildPanel();
+    document.getElementById('village-founded-ok').addEventListener('click', () => {
+        document.getElementById('village-founded-overlay').classList.add('hidden');
+        switchTab('village');
+        buildVillagePanel();
+    });
+    if (game.phase === 'village') {
+        switchTab('village');
+        buildVillagePanel();
+    }
     const ro = new ResizeObserver(() => {
         resizeCanvas();
         requestAnimationFrame(matchFarmTabHeight);
