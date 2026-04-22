@@ -654,8 +654,8 @@
         <div id="title-content">
             <div id="title-logo">IDLE DOMINION</div>
             <div id="title-tagline">Build your medieval empire</div>
-            <button class="title-btn" id="btn-resume">&#9658; Resume Game</button>
-            <button class="title-btn" id="btn-new">&#9658; New Game</button>
+            <button class="title-btn" id="btn-resume" onclick="try{loadGame();startGame();}catch(e){alert(e);}">&#9658; Resume Game</button>
+            <button class="title-btn" id="btn-new" onclick="try{if(hasSave()){document.getElementById('confirm-overlay').classList.remove('hidden');}else{resetGameState();startGame();}}catch(e){alert(e);}">&#9658; New Game</button>
         </div>
     </div>
 
@@ -3764,4 +3764,321 @@ function saveGame() {
             upgrades: UPGRADES.map(u => u.level),
             bldgs: VILLAGE_BLDGS.map(b => b.level),
             savedAt: Date.now(),
-            trees: game.t
+            trees: game.trees.map(t => ({
+                growth: t.growth, grown: t.grown,
+                clicks: t.clicks, hasFruit: t.hasFruit,
+            })),
+            farm: { plots: game.farm.plots.map(p => ({ growth: p.growth, grown: p.grown })) },
+            mine: {
+                rockClicks: game.mine.rock.clicks,
+                rockLoaded: game.mine.rock.loaded,
+                rockRespawnTimer: game.mine.rock.respawnTimer,
+                cartStones: game.mine.cart.stones,
+                cartState: game.mine.cart.state,
+                cartTimer: game.mine.cart.timer,
+                cartTransportStones: game.mine.cart.transportStones,
+                buddyPickAccum: game.mine.buddyPickAccum,
+                buddyLoadAccum: game.mine.buddyLoadAccum,
+                buddySendAccum: game.mine.buddySendAccum,
+                firstLoadDone: game.mine.firstLoadDone,
+                cityPaidWood:  game.mine.cityPaid.wood,
+                cityPaidFood:  game.mine.cityPaid.food,
+                cityPaidStone: game.mine.cityPaid.stone,
+            },
+        };
+        localStorage.setItem(SAVE_KEY, JSON.stringify(data));
+    } catch(e) {}
+}
+
+function loadGame() {
+    try {
+        const raw = localStorage.getItem(SAVE_KEY);
+        if (!raw) return;
+        const data = JSON.parse(raw);
+
+        if (typeof data.wood === 'number' && isFinite(data.wood))
+            game.wood = data.wood;
+        if (typeof data.food === 'number' && isFinite(data.food))
+            game.food = data.food;
+        if (typeof data.firstChopDone === 'boolean')
+            game.firstChopDone = data.firstChopDone;
+
+        if (Array.isArray(data.upgrades)) {
+            data.upgrades.forEach((lvl, i) => {
+                if (UPGRADES[i] && typeof lvl === 'number' && lvl >= 0 && lvl <= UPGRADES[i].maxLevel)
+                    UPGRADES[i].level = lvl;
+            });
+        }
+        if (Array.isArray(data.bldgs)) {
+            data.bldgs.forEach((lvl, i) => {
+                if (VILLAGE_BLDGS[i] && typeof lvl === 'number' && lvl >= 0 && lvl <= VILLAGE_BLDGS[i].maxLevel)
+                    VILLAGE_BLDGS[i].level = lvl;
+            });
+        }
+
+        if (Array.isArray(data.trees) && data.trees.length > 0) {
+            game.trees = data.trees.map(t => ({
+                growth:    (typeof t.growth === 'number' && isFinite(t.growth)) ? Math.max(0, Math.min(1, t.growth)) : 0,
+                grown:     t.grown    === true,
+                clicks:    (typeof t.clicks === 'number') ? t.clicks : 0,
+                hasFruit:  t.hasFruit === true,
+                shakeTimer: 0, shakeX: 0, readyPing: t.grown === true,
+            }));
+        }
+
+        // Restore farm state
+        if (data.farm && Array.isArray(data.farm.plots) && data.farm.plots.length > 0) {
+            game.farm.plots = data.farm.plots.map(p => ({
+                growth:    (typeof p.growth === 'number' && isFinite(p.growth)) ? Math.max(0, Math.min(1, p.growth)) : 0,
+                grown:     p.grown === true,
+                readyPing: p.grown === true,
+            }));
+        }
+
+        // Restore mine state
+        if (data.mine) {
+            game.mine.rock.clicks          = typeof data.mine.rockClicks          === 'number' ? data.mine.rockClicks          : 0;
+            game.mine.rock.loaded          = !!data.mine.rockLoaded;
+            game.mine.rock.respawnTimer    = typeof data.mine.rockRespawnTimer    === 'number' ? data.mine.rockRespawnTimer    : 0;
+            game.mine.cart.stones          = typeof data.mine.cartStones          === 'number' ? data.mine.cartStones          : 0;
+            game.mine.cart.state           = ['idle','leaving','depositing','returning'].includes(data.mine.cartState) ? data.mine.cartState : 'idle';
+            game.mine.cart.timer           = typeof data.mine.cartTimer           === 'number' ? data.mine.cartTimer           : 0;
+            game.mine.cart.transportStones = typeof data.mine.cartTransportStones === 'number' ? data.mine.cartTransportStones : 0;
+            if (typeof data.mine.buddyPickAccum === 'number') game.mine.buddyPickAccum = data.mine.buddyPickAccum;
+            if (typeof data.mine.buddyLoadAccum === 'number') game.mine.buddyLoadAccum = data.mine.buddyLoadAccum;
+            if (typeof data.mine.buddySendAccum === 'number') game.mine.buddySendAccum = data.mine.buddySendAccum;
+            if (typeof data.mine.firstLoadDone === 'boolean') game.mine.firstLoadDone = data.mine.firstLoadDone;
+            if (typeof data.mine.cityPaidWood  === 'boolean') game.mine.cityPaid.wood  = data.mine.cityPaidWood;
+            if (typeof data.mine.cityPaidFood  === 'boolean') game.mine.cityPaid.food  = data.mine.cityPaidFood;
+            if (typeof data.mine.cityPaidStone === 'boolean') game.mine.cityPaid.stone = data.mine.cityPaidStone;
+            // Snap 'leaving' to 'depositing' on reload (animation already happened)
+            if (game.mine.cart.state === 'leaving') { game.mine.cart.state = 'depositing'; game.mine.cart.timer = getCartTripTime(); game.mine.cart.travelX = 0; }
+        }
+        if (typeof data.stone === 'number' && isFinite(data.stone)) game.stone = data.stone;
+
+        // Restore village state
+        if (data.phase === 'village') {
+            game.phase = 'village';
+            game.population = typeof data.population === 'number' ? data.population : 3;
+            if (data.workers && typeof data.workers === 'object') {
+                game.workers.foresters = data.workers.foresters || 0;
+                game.workers.farmers   = data.workers.farmers   || 0;
+                game.workers.miners    = data.workers.miners    || 0;
+            }
+        }
+
+        // Offline income (Village Center unlocked) — resources applied on COLLECT
+        if (game.phase === 'village' && VILLAGE_BLDGS[1].level >= 1 && typeof data.savedAt === 'number') {
+            const elapsedMs = Math.min(Date.now() - data.savedAt, 8 * 3600 * 1000);
+            if (elapsedMs > 1000) {
+                const secs      = elapsedMs / 1000;
+                const gainWood  = Math.floor(game.workers.foresters * secs);
+                const gainFood  = Math.floor(game.workers.farmers   * secs);
+                const gainStone = Math.floor(game.workers.miners    * secs);
+                if (gainWood > 0 || gainFood > 0 || gainStone > 0) {
+                    const totalSecs = Math.floor(elapsedMs / 1000);
+                    const hrs  = Math.floor(totalSecs / 3600);
+                    const mins = Math.floor((totalSecs % 3600) / 60);
+                    const s    = totalSecs % 60;
+                    pendingOfflineGains = { gainWood, gainFood, gainStone, hrs, mins, secs: s };
+                }
+            }
+        }
+
+        // Restore UI state
+        if (game.phase === 'village') {
+            document.getElementById('tab-wood-btn').style.display = 'none';
+            document.getElementById('tab-farm-btn').style.display = 'none';
+            document.getElementById('tab-mine-btn').style.display = 'none';
+            document.getElementById('tab-village-btn').style.display = '';
+            document.getElementById('food-hud').classList.remove('hidden');
+            document.getElementById('stone-hud').classList.remove('hidden');
+        } else {
+            if (UPGRADES[7].level > 0) {
+                document.getElementById('tab-farm-btn').style.display = '';
+            }
+            if (UPGRADES[16].level > 0) {
+                document.getElementById('tab-mine-btn').style.display = '';
+            }
+            if (UPGRADES[4].level > 0 || game.food > 0) {
+                document.getElementById('food-hud').classList.remove('hidden');
+            }
+        }
+    } catch(e) {}
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  TITLE SCREEN
+// ═══════════════════════════════════════════════════════════════
+function hasSave() {
+    try { return !!localStorage.getItem(SAVE_KEY); } catch(e) { return false; }
+}
+
+function eraseSave() {
+    try { localStorage.removeItem(SAVE_KEY); } catch(e) {}
+}
+
+function resetGameState() {
+    game.wood          = 0;
+    game.food          = 0;
+    game.stone         = 0;
+    game.phase         = 'forest';
+    game.population    = 0;
+    game.workers       = { foresters: 0, farmers: 0, miners: 0 };
+    game.workerAccum   = { wood: 0, food: 0, stone: 0 };
+    game.firstChopDone  = false;
+    game.lodgeAccum     = 0;
+    game.windmillAccum  = 0;
+    game.trees         = [makeTree()];
+    game.farm          = { plots: [makePlot()] };
+    game.mine          = makeMine();
+    mineSendCartBtn    = null;
+    UPGRADES.forEach(u => u.level = 0);
+    VILLAGE_BLDGS.forEach(b => b.level = 0);
+    document.getElementById('tab-wood-btn').style.display = '';
+    document.getElementById('tab-farm-btn').style.display = 'none';
+    document.getElementById('tab-mine-btn').style.display = 'none';
+    document.getElementById('tab-village-btn').style.display = 'none';
+    document.getElementById('food-hud').classList.add('hidden');
+    document.getElementById('stone-hud').classList.add('hidden');
+    switchTab('wood');
+}
+
+function showOfflinePopup(gains) {
+    const popup = document.getElementById('offline-popup');
+    const awayEl = document.getElementById('offline-popup-away');
+    const gainsEl = document.getElementById('offline-popup-gains');
+    const okBtn = document.getElementById('offline-popup-ok');
+
+    const parts = [];
+    if (gains.hrs  > 0) parts.push(`${gains.hrs}h`);
+    if (gains.mins > 0) parts.push(`${gains.mins}m`);
+    if (gains.secs > 0 || parts.length === 0) parts.push(`${gains.secs}s`);
+    awayEl.textContent = `You were away for ${parts.join(' ')}`;
+
+    const lines = [];
+    if (gains.gainWood  > 0) lines.push(`+${gains.gainWood.toLocaleString()} 🌳 Wood`);
+    if (gains.gainFood  > 0) lines.push(`+${gains.gainFood.toLocaleString()} 🌾 Food`);
+    if (gains.gainStone > 0) lines.push(`+${gains.gainStone.toLocaleString()} 🗻 Stone`);
+    gainsEl.innerHTML = lines.join('<br>');
+
+    popup.classList.remove('hidden');
+    if (!okBtn._wired) {
+        okBtn.addEventListener('click', () => {
+            const g = okBtn._pendingGains;
+            if (g) {
+                game.wood  += g.gainWood;
+                game.food  += g.gainFood;
+                game.stone += g.gainStone;
+                okBtn._pendingGains = null;
+            }
+            popup.classList.add('hidden');
+            updateHUD();
+            saveGame();
+        });
+        okBtn._wired = true;
+    }
+    okBtn._pendingGains = gains;
+}
+
+function matchFarmTabHeight() {
+    const woodEl = document.getElementById('tab-wood');
+    const h = woodEl.offsetHeight + 'px';
+    document.getElementById('tab-farm').style.minHeight = h;
+    document.getElementById('tab-mine').style.minHeight = h;
+}
+
+function startGame() {
+    document.getElementById('title-screen').classList.add('hidden');
+    buildPanel();
+    document.getElementById('village-founded-ok').addEventListener('click', () => {
+        document.getElementById('village-founded-overlay').classList.add('hidden');
+        switchTab('village');
+        buildVillagePanel();
+    });
+    if (game.phase === 'village') {
+        switchTab('village');
+        buildVillagePanel();
+    }
+    if (pendingOfflineGains) {
+        showOfflinePopup(pendingOfflineGains);
+        pendingOfflineGains = null;
+    }
+    const ro = new ResizeObserver(() => {
+        resizeCanvas();
+        requestAnimationFrame(matchFarmTabHeight);
+    });
+    ro.observe(canvas);
+    requestAnimationFrame(() => {
+        resizeCanvas();
+        initClouds();
+        matchFarmTabHeight();
+        requestAnimationFrame(loop);
+    });
+}
+
+function devUnlockMine() {
+    UPGRADES[16].level = 1;
+    const mineBtn = document.getElementById('tab-mine-btn');
+    mineBtn.style.display = '';
+    mineBtn.classList.add('new');
+    for (let i = 0; i < UPGRADES.length; i++) buildCard(i);
+    syncPanel();
+    saveGame();
+}
+
+let devFree = false;
+let pendingOfflineGains = null;
+
+function devMaxAll() {
+    devFree = !devFree;
+    const btn = document.getElementById('dev-max-btn');
+    btn.textContent = devFree ? '⚠ DEV: FREE UPGRADES (ON)' : '⚠ DEV: FREE UPGRADES';
+}
+
+function showTitleScreen() {
+    const btnResume      = document.getElementById('btn-resume');
+    const confirmOverlay = document.getElementById('confirm-overlay');
+
+    if (hasSave()) {
+        btnResume.classList.remove('hidden');
+    } else {
+        btnResume.classList.add('hidden');
+    }
+
+    btnResume.onclick = () => {
+        try { loadGame(); startGame(); } catch(e) { console.error('Resume failed:', e); }
+    };
+
+    document.getElementById('btn-new').onclick = () => {
+        try {
+            if (hasSave()) {
+                confirmOverlay.classList.remove('hidden');
+            } else {
+                resetGameState();
+                startGame();
+            }
+        } catch(e) { console.error('New game failed:', e); }
+    };
+
+    document.getElementById('confirm-yes').onclick = () => {
+        try {
+            confirmOverlay.classList.add('hidden');
+            eraseSave();
+            resetGameState();
+            startGame();
+        } catch(e) { console.error('Confirm-yes failed:', e); }
+    };
+
+    document.getElementById('confirm-no').onclick = () => {
+        confirmOverlay.classList.add('hidden');
+    };
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  START
+// ═══════════════════════════════════════════════════════════════
+showTitleScreen();
+</script>
+</body>
+</html>
