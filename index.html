@@ -192,6 +192,7 @@
             line-height: 1.25;
             word-break: break-word;
         }
+        #village-subtab-buildings .upg-name { text-align: center; }
         .upg-effect {
             color: #7a9860;
             font-size: clamp(10px, 2.6vw, 13px);
@@ -750,7 +751,7 @@
     <div id="village-center-overlay" class="hidden">
         <div id="village-center-box">
             <div id="village-center-title">✦ Village Center Built ✦</div>
-            <div id="village-center-msg">The Village Center unlocks the ability to collect resources even when the game is closed.<br><br>Let your villagers do the work for you.<br><br>The resources will be there when you return!</div>
+            <div id="village-center-msg">You can now collect resources even when the game is closed.<br><br>Let your villagers do the work.<br><br>The gathered resources will be there when you return!</div>
             <button id="village-center-ok">OK</button>
         </div>
     </div>
@@ -777,6 +778,7 @@
 
     <div id="wrapper">
         <canvas id="gameCanvas"></canvas>
+        <button id="dev-free-village-btn" onclick="devMaxAll()" style="display:block;width:100%;padding:4px 0;background:#1a0a0a;color:#ff4040;font-family:'Courier New',monospace;font-size:11px;font-weight:900;letter-spacing:2px;border:1px dashed #ff4040;cursor:pointer;">⚠ DEV: FREE UPGRADES</button>
         <div id="hud">
             <div>🌳 <span id="woodCount">0</span></div>
             <div id="food-hud" class="hidden">🌾 <span id="foodCount">0</span></div>
@@ -790,7 +792,6 @@
                 <button class="tab-btn" id="tab-village-btn" style="display:none">VILLAGE</button>
             </div>
             <div id="tab-wood">
-                <button id="dev-max-btn" onclick="devMaxAll()" style="display:block;width:100%;padding:4px 0;background:#1a0a0a;color:#ff4040;font-family:'Courier New',monospace;font-size:11px;font-weight:900;letter-spacing:2px;border:1px dashed #ff4040;cursor:pointer;">⚠ DEV: FREE UPGRADES</button>
                 <div class="cards-row">
                     <div id="upg-0" class="upg-card"></div>
                     <div id="upg-1" class="upg-card"></div>
@@ -819,13 +820,12 @@
                 </div>
             </div>
             <div id="tab-village">
-                <button id="dev-free-village-btn" onclick="devMaxAll()" style="display:block;width:100%;padding:4px 0;background:#1a0a0a;color:#ff4040;font-family:'Courier New',monospace;font-size:11px;font-weight:900;letter-spacing:2px;border:1px dashed #ff4040;cursor:pointer;">⚠ DEV: FREE UPGRADES</button>
                 <div id="village-subtab-bar">
                     <button class="village-subtab-btn active" id="village-subtab-workers-btn">WORKERS</button>
                     <button class="village-subtab-btn" id="village-subtab-buildings-btn">BUILDINGS</button>
                 </div>
                 <div id="village-subtab-workers">
-                    <div class="village-idle-row" id="village-idle-row">👥 0 idle / 0 total</div>
+                    <div class="village-idle-row" id="village-idle-row">Population 👥 0 idle / 0 total</div>
                     <div class="worker-row" id="village-worker-foresters"></div>
                     <div class="worker-row" id="village-worker-farmers"></div>
                     <div class="worker-row" id="village-worker-miners"></div>
@@ -834,6 +834,7 @@
                     <div class="cards-row">
                         <div id="vbld-0" class="upg-card"></div>
                         <div id="vbld-1" class="upg-card"></div>
+                        <div id="vbld-2" class="upg-card"></div>
                     </div>
                 </div>
             </div>
@@ -1372,10 +1373,10 @@ const UPGRADES = [
 const VILLAGE_BLDGS = [
     // 0 – House
     {
-        id: 'house', name: 'HOUSE', maxLevel: 10, level: 0,
+        id: 'house', name: 'HOUSE', maxLevel: 27, level: 0,
         currency: 'stone-mixed',
-        get woodCost()  { return Math.ceil(50  * Math.pow(1.6, this.level)); },
-        get stoneCost() { return Math.ceil(25  * Math.pow(1.6, this.level)); },
+        get woodCost()  { return Math.ceil(30  * Math.pow(1.1, this.level)); },
+        get stoneCost() { return Math.ceil(15  * Math.pow(1.1, this.level)); },
         effectText() {
             const cap = 3 + this.level;
             if (this.level >= this.maxLevel) return `Pop. cap: ${cap}\n(max)`;
@@ -1384,19 +1385,35 @@ const VILLAGE_BLDGS = [
     },
     // 1 – Village Center
     {
-        id: 'villagecenter', name: 'VILLAGE CENTER', maxLevel: 1, level: 0,
+        id: 'villagecenter', name: '★ VILLAGE CENTER ★', maxLevel: 1, level: 0,
         currency: 'tri-mixed',
         get woodCost()  { return 1000; },
-        get foodCost()  { return 1000; },
+        get foodCost()  { return 750; },
         get stoneCost() { return 500; },
         effectText() {
             if (this.level >= this.maxLevel) return `Offline\nIncome: ON`;
-            return `Unlocks\nOffline Income`;
+            return `Unlocks Offline Income`;
+        },
+    },
+    // 2 – Warehouse
+    {
+        id: 'warehouse', name: 'WAREHOUSE', maxLevel: 3, level: 0,
+        currency: 'tri-mixed',
+        get woodCost()  { return 1000 * Math.pow(10, this.level); },
+        get foodCost()  { return 1000 * Math.pow(10, this.level); },
+        get stoneCost() { return 1000 * Math.pow(10, this.level); },
+        effectText() {
+            const cur = formatCapStr(getStorageCap());
+            if (this.level >= this.maxLevel) return `Storage: ${cur}\n(max)`;
+            const next = formatCapStr(1000 * Math.pow(10, this.level + 1));
+            return `Storage: ${cur}\n▸ ${next}`;
         },
     },
 ];
 
 function getGrowTime()          { return UPGRADES[1].growTimeAt(UPGRADES[1].level); }
+function getStorageCap()        { return 1000 * Math.pow(10, VILLAGE_BLDGS[2].level); }
+function formatCapStr(n)        { return n >= 1e6 ? (n/1e6)+'M' : n >= 1000 ? (n/1000)+'k' : ''+n; }
 function getClicksNeeded()      { return 10 - UPGRADES[0].level; }
 function getWoodMultiplier()    { return UPGRADES[2].multiplier(); }
 function getFoodMultiplier()    { return UPGRADES[6].multiplier(); }
@@ -1416,7 +1433,7 @@ function getBuddyLoadDelay()   { const lvl = UPGRADES[21] ? UPGRADES[21].level :
 function getBuddySendDelay()   { const lvl = UPGRADES[21] ? UPGRADES[21].level : 0; return (3.5 - lvl * 0.5) * 1000; }
 function getPicksRequired()    { return MINE_ROCK_CLICKS - (UPGRADES[17] ? UPGRADES[17].level : 0); }
 function getRockRespawnTime()  { return Math.max(0, 5000 - (UPGRADES[17] ? UPGRADES[17].level * 500 : 0)); }
-function formatNum(n)        { return (Number.isInteger(n) || n >= 100) ? Math.floor(n) : n.toFixed(2); }
+function formatNum(n)        { if (n >= 1000000) return (n / 1000000).toFixed(2).replace(/\.?0+$/, '') + 'M'; return (Number.isInteger(n) || n >= 100) ? Math.floor(n) : n.toFixed(2); }
 function formatCost(n)      { return n >= 10000 ? Math.round(n / 1000) + 'k' : String(Math.ceil(n)); }
 
 // ═══════════════════════════════════════════════════════════════
@@ -2072,8 +2089,124 @@ function drawVillageCenter(ts) {
     ctx.globalAlpha = 1;
 }
 
+function drawWarehouse(ts) {
+    if (VILLAGE_BLDGS[2].level < 1) return;
+
+    const wW     = Math.round(W * 0.19);
+    const wH     = Math.round(wW * 0.68);
+    const wX     = Math.round(W * 0.04);
+    const foundH = Math.max(3, Math.round(wH * 0.10));
+    const wallH  = wH - foundH;
+    const wallTopY = GROUND - wH;
+
+    // Foundation
+    ctx.fillStyle = '#3e2e18';
+    ctx.fillRect(wX, GROUND - foundH, wW, foundH);
+    ctx.fillStyle = '#302010';
+    for (let b = 0; b < 4; b++)
+        ctx.fillRect(wX + b * Math.round(wW / 4), GROUND - foundH, 1, foundH);
+
+    // Walls
+    ctx.fillStyle = '#9a8060';
+    ctx.fillRect(wX, wallTopY, wW, wallH);
+
+    // Horizontal plank lines
+    ctx.fillStyle = '#806848';
+    for (let i = 1; i < 5; i++)
+        ctx.fillRect(wX, wallTopY + Math.round(wallH * i / 5), wW, 1);
+
+    // Corner beams
+    const bW = Math.max(3, Math.round(wW * 0.055));
+    ctx.fillStyle = '#5a3e18';
+    ctx.fillRect(wX,           wallTopY, bW, wallH);
+    ctx.fillRect(wX + wW - bW, wallTopY, bW, wallH);
+    ctx.fillRect(wX, wallTopY,            wW, bW);
+    ctx.fillRect(wX, GROUND - foundH - bW, wW, bW);
+
+    // Roof (low peaked)
+    const roofH  = Math.round(wW * 0.20);
+    const peakX  = wX + Math.round(wW / 2);
+    const peakY  = wallTopY - roofH;
+    const ovhg   = 3;
+    ctx.fillStyle = '#7a4820';
+    ctx.beginPath();
+    ctx.moveTo(wX - ovhg,       wallTopY);
+    ctx.lineTo(peakX,           peakY);
+    ctx.lineTo(wX + wW + ovhg,  wallTopY);
+    ctx.closePath();
+    ctx.fill();
+
+    // Roof shading stripes
+    for (let i = 1; i <= 3; i++) {
+        const t   = i / 4;
+        const ly  = Math.round(peakY + (wallTopY - peakY) * t);
+        const lxL = Math.round(peakX + (wX - ovhg - peakX) * t);
+        const lxR = Math.round(peakX + (wX + wW + ovhg - peakX) * t);
+        ctx.fillStyle = i % 2 === 0 ? '#5e3210' : '#8a5228';
+        ctx.fillRect(lxL, ly, lxR - lxL, Math.max(1, Math.round(wW * 0.022)));
+    }
+    // Ridge cap
+    ctx.fillStyle = '#3e2208';
+    ctx.fillRect(peakX - 2, peakY, 4, Math.round(wW * 0.07));
+
+    // Large double doors
+    const dW  = Math.round(wW * 0.44);
+    const dH  = Math.round(wallH * 0.65);
+    const dX  = wX + Math.round((wW - dW) / 2);
+    const dY  = GROUND - foundH - dH;
+    const mid = dX + Math.round(dW / 2);
+
+    ctx.fillStyle = '#3e2810';
+    ctx.fillRect(dX - 2, dY - 2, dW + 4, dH + 2);
+
+    ctx.fillStyle = '#6e4820';
+    ctx.fillRect(dX,   dY, Math.round(dW / 2) - 1, dH);
+    ctx.fillRect(mid + 1, dY, dW - Math.round(dW / 2) - 1, dH);
+
+    ctx.fillStyle = '#5a3818';
+    ctx.fillRect(mid - 1, dY, 2, dH);
+    for (let i = 1; i < 3; i++) {
+        const hy = dY + Math.round(dH * i / 3);
+        ctx.fillRect(dX,   hy, Math.round(dW / 2) - 1, 1);
+        ctx.fillRect(mid + 1, hy, dW - Math.round(dW / 2) - 1, 1);
+    }
+
+    // Door handles
+    const hs = Math.max(2, Math.round(dW * 0.055));
+    const hY = dY + Math.round(dH * 0.46);
+    ctx.fillStyle = '#c8a050';
+    ctx.fillRect(mid - 2 - hs, hY, hs, hs);
+    ctx.fillRect(mid + 2,      hY, hs, hs);
+
+    // Barrels to the right of doors
+    const brlW = Math.max(7, Math.round(wW * 0.115));
+    const brlH = Math.round(brlW * 1.35);
+    const brlX = dX + dW + Math.round(wW * 0.03);
+    const brlY = GROUND - foundH - brlH;
+
+    ctx.fillStyle = '#7a5030';
+    ctx.fillRect(brlX, brlY, brlW, brlH);
+    ctx.fillStyle = '#4a2e10';
+    ctx.fillRect(brlX, brlY + Math.round(brlH * 0.25), brlW, 2);
+    ctx.fillRect(brlX, brlY + Math.round(brlH * 0.65), brlW, 2);
+    ctx.fillStyle = '#8a6040';
+    ctx.fillRect(brlX, brlY, brlW, Math.round(brlH * 0.09));
+
+    // Second smaller barrel leaning behind first
+    const b2W = Math.round(brlW * 0.82);
+    const b2H = Math.round(b2W * 1.35);
+    const b2X = brlX + Math.round(brlW * 0.6);
+    const b2Y = GROUND - foundH - b2H;
+    ctx.fillStyle = '#6a4028';
+    ctx.fillRect(b2X, b2Y, b2W, b2H);
+    ctx.fillStyle = '#3e2408';
+    ctx.fillRect(b2X, b2Y + Math.round(b2H * 0.3),  b2W, 2);
+    ctx.fillRect(b2X, b2Y + Math.round(b2H * 0.65), b2W, 2);
+}
+
 function drawVillageScene(ts) {
     drawBackground(ts);
+    drawWarehouse(ts);
     drawVillageCenter(ts);
     drawVillageHouse(ts);
     drawFloats();
@@ -2187,14 +2320,15 @@ function drawUI(ts) {
 }
 
 function updateHUD() {
-    document.getElementById('woodCount').textContent = formatNum(game.wood);
+    const cap = game.phase === 'village' ? '/' + formatCapStr(getStorageCap()) : '';
+    document.getElementById('woodCount').textContent = formatNum(game.wood) + cap;
     if (game.phase === 'village' || UPGRADES[4].level > 0 || game.food > 0) {
         document.getElementById('food-hud').classList.remove('hidden');
-        document.getElementById('foodCount').textContent = formatNum(game.food);
+        document.getElementById('foodCount').textContent = formatNum(game.food) + cap;
     }
     if (game.phase === 'village' || game.stone > 0 || UPGRADES[16].level > 0) {
         document.getElementById('stone-hud').classList.remove('hidden');
-        document.getElementById('stoneCount').textContent = formatNum(game.stone);
+        document.getElementById('stoneCount').textContent = formatNum(game.stone) + cap;
     }
 }
 
@@ -2215,10 +2349,10 @@ function buildVillagePanel() {
     const canRecruit = game.population < game.popCap;
     const idleEl = document.getElementById('village-idle-row');
     if (idleEl) {
-        const recruitCost = Math.ceil(100 * Math.pow(1.5, game.population - 3));
+        const recruitCost = Math.ceil(20 * Math.pow(1.1, game.population - 3));
         const canAffordRecruit = devFree || (canRecruit && game.food >= recruitCost);
         const recruitCls = canAffordRecruit ? 'can-afford' : 'cant-afford';
-        idleEl.innerHTML = `<span>👥 ${idle} idle / ${game.popCap}</span><button id="recruit-btn" class="${recruitCls}">+ RECRUIT (${formatNum(recruitCost)} 🌾)</button>`;
+        idleEl.innerHTML = `<span>Population 👥 ${idle} idle / ${game.popCap}</span><button id="recruit-btn" class="${recruitCls}">+ RECRUIT (${formatNum(recruitCost)} 🌾)</button>`;
         const recruitBtn = document.getElementById('recruit-btn');
         if (recruitBtn && !recruitBtn._wired) {
             recruitBtn.addEventListener('click', recruitVillager);
@@ -2265,6 +2399,7 @@ function buildVillagePanel() {
 function bldgCostHtml(b) {
     if (b.currency === 'tri-mixed')   return `${formatCost(b.woodCost)} 🌳<br>${formatCost(b.foodCost)} 🌾<br>${formatCost(b.stoneCost)} 🗻`;
     if (b.currency === 'stone-mixed') return `${formatCost(b.woodCost)} 🌳<br>${formatCost(b.stoneCost)} 🗻`;
+    if (b.currency === 'food-stone')  return `${formatCost(b.foodCost)} 🌾<br>${formatCost(b.stoneCost)} 🗻`;
     if (b.currency === 'mixed')       return `${formatCost(b.woodCost)} 🌳<br>${formatCost(b.foodCost)} 🌾`;
     return `${formatCost(b.woodCost)} 🌳`;
 }
@@ -2273,14 +2408,16 @@ function canAffordBldg(b) {
     if (devFree) return true;
     if (b.currency === 'tri-mixed')   return game.wood >= b.woodCost && game.food >= b.foodCost && game.stone >= b.stoneCost;
     if (b.currency === 'stone-mixed') return game.wood >= b.woodCost && game.stone >= b.stoneCost;
+    if (b.currency === 'food-stone')  return game.food >= b.foodCost && game.stone >= b.stoneCost;
     if (b.currency === 'mixed')       return game.wood >= b.woodCost && game.food >= b.foodCost;
     return game.wood >= b.woodCost;
 }
 
 function spendBldg(b) {
     if (devFree) return;
-    if (b.currency === 'tri-mixed')   { game.wood -= b.woodCost; game.food -= b.foodCost; game.stone -= b.stoneCost; }
+    if (b.currency === 'tri-mixed')        { game.wood -= b.woodCost; game.food -= b.foodCost; game.stone -= b.stoneCost; }
     else if (b.currency === 'stone-mixed') { game.wood -= b.woodCost; game.stone -= b.stoneCost; }
+    else if (b.currency === 'food-stone')  { game.food -= b.foodCost; game.stone -= b.stoneCost; }
     else if (b.currency === 'mixed')       { game.wood -= b.woodCost; game.food -= b.foodCost; }
     else { game.wood -= b.woodCost; }
 }
@@ -2292,6 +2429,10 @@ function buildBuildingCard(i) {
     if (!el) return;
 
     if (b.id === 'villagecenter' && atMax) {
+        el.style.display = 'none';
+        return;
+    }
+    if (b.id === 'warehouse' && VILLAGE_BLDGS[1].level < 1) {
         el.style.display = 'none';
         return;
     }
@@ -2330,7 +2471,7 @@ function syncBuildingsPanel() {
     }
     const recruitBtn = document.getElementById('recruit-btn');
     if (recruitBtn) {
-        const recruitCost = Math.ceil(100 * Math.pow(1.5, game.population - 3));
+        const recruitCost = Math.ceil(20 * Math.pow(1.1, game.population - 3));
         const canAfford = devFree || (game.population < game.popCap && game.food >= recruitCost);
         recruitBtn.className = canAfford ? 'can-afford' : 'cant-afford';
     }
@@ -2356,7 +2497,7 @@ function recruitVillager() {
         spawnFloat(W / 2, displayH * 0.4, 'BUILD MORE HOUSES', '#c84040', 20, 1000);
         return;
     }
-    const cost = Math.ceil(100 * Math.pow(1.5, game.population - 3));
+    const cost = Math.ceil(20 * Math.pow(1.1, game.population - 3));
     if (!devFree) {
         if (game.food < cost) {
             spawnFloat(W / 2, displayH * 0.4, `NEED ${formatNum(cost)} FOOD`, '#c84040', 20, 1000);
@@ -3868,6 +4009,10 @@ function loop(ts) {
         if (gw > 0) { game.wood  += gw; game.workerAccum.wood  -= gw; }
         if (gf > 0) { game.food  += gf; game.workerAccum.food  -= gf; }
         if (gs > 0) { game.stone += gs; game.workerAccum.stone -= gs; }
+        const storageCap = getStorageCap();
+        game.wood  = Math.min(game.wood,  storageCap);
+        game.food  = Math.min(game.food,  storageCap);
+        game.stone = Math.min(game.stone, storageCap);
     }
 
     ctx.clearRect(0, 0, W, displayH);
