@@ -268,11 +268,31 @@
             font-weight: 900;
             letter-spacing: 3px;
             text-align: center;
-            padding: 5px 0;
+            padding: 5px 8px;
             border-bottom: 1px solid #1a0d05;
             background: #0d0a07;
             flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
         }
+        #recruit-btn {
+            font-family: 'Courier New', monospace;
+            font-size: clamp(9px, 2.3vw, 11px);
+            font-weight: 900;
+            letter-spacing: 1px;
+            padding: 3px 8px;
+            cursor: pointer;
+            transition: background 0.1s;
+            border: 1px solid #3a6020;
+            background: #0d1808;
+            color: #6DC040;
+        }
+        #recruit-btn.can-afford { border-color: #3a6020; background: #0d1808; color: #6DC040; }
+        #recruit-btn.can-afford:hover { background: #122010; }
+        #recruit-btn.cant-afford { border-color: #602020; background: #180d0d; color: #c84040; }
+        #recruit-btn.cant-afford:hover { background: #1a0e0e; }
         .worker-row {
             display: flex;
             align-items: center;
@@ -342,7 +362,7 @@
             font-weight: 900;
             letter-spacing: 3px;
             text-transform: uppercase;
-            color: #3a2818;
+            color: #c8a450;
             background: #0a0704;
             border: none;
             border-right: 1px solid #1a0d05;
@@ -350,8 +370,8 @@
             transition: background 0.1s, color 0.1s;
         }
         .village-subtab-btn:last-child { border-right: none; }
-        .village-subtab-btn.active { color: #c8a450; background: #0d0a07; text-shadow: 0 0 6px #8B6320; }
-        .village-subtab-btn:hover:not(.active) { color: #6a5030; }
+        .village-subtab-btn.active { color: #0d1808; background: #4a8820; text-shadow: none; }
+        .village-subtab-btn:hover:not(.active) { background: #0f0e08; }
         /* ── Village sub-tab panels ── */
         #village-subtab-workers {
             display: flex;
@@ -582,6 +602,64 @@
         }
         #village-founded-ok:hover { background: #1a1008; color: #e8c060; }
 
+        /* ── Village Center popup ── */
+        #village-center-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.82);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 300;
+        }
+        #village-center-overlay.hidden { display: none; }
+        #village-center-box {
+            background: #0d0a07;
+            border: 2px solid #c8a450;
+            padding: 32px 28px 24px;
+            width: clamp(260px, 82vw, 420px);
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 18px;
+            box-shadow: 0 0 40px rgba(200,164,80,0.18);
+        }
+        #village-center-title {
+            color: #ffd040;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: clamp(14px, 3.8vw, 18px);
+            font-weight: 900;
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            text-shadow: 0 0 14px #a07820;
+        }
+        #village-center-msg {
+            color: #c8a450;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: clamp(12px, 3vw, 14px);
+            font-weight: bold;
+            letter-spacing: 0.5px;
+            line-height: 1.75;
+        }
+        #village-center-ok {
+            font-family: 'Courier New', Courier, monospace;
+            font-weight: 900;
+            letter-spacing: 5px;
+            text-transform: uppercase;
+            border: none;
+            cursor: pointer;
+            width: clamp(120px, 40vw, 180px);
+            padding: 13px 0;
+            font-size: clamp(12px, 3vw, 14px);
+            background: #100a04;
+            color: #c8a450;
+            border: 2px solid #4a2e10;
+            transition: background 0.1s, color 0.1s;
+            margin-top: 4px;
+        }
+        #village-center-ok:hover { background: #1a1008; color: #e8c060; }
+
         /* ── Offline Income popup ── */
         #offline-popup {
             position: fixed;
@@ -668,6 +746,15 @@
         </div>
     </div>
 
+    <!-- Village Center popup -->
+    <div id="village-center-overlay" class="hidden">
+        <div id="village-center-box">
+            <div id="village-center-title">✦ Village Center Built ✦</div>
+            <div id="village-center-msg">The Village Center unlocks the ability to collect resources even when the game is closed.<br><br>Let your villagers do the work for you.<br><br>The resources will be there when you return!</div>
+            <button id="village-center-ok">OK</button>
+        </div>
+    </div>
+
     <!-- Offline Income popup -->
     <div id="offline-popup" class="hidden">
         <div id="offline-popup-box">
@@ -732,6 +819,7 @@
                 </div>
             </div>
             <div id="tab-village">
+                <button id="dev-free-village-btn" onclick="devMaxAll()" style="display:block;width:100%;padding:4px 0;background:#1a0a0a;color:#ff4040;font-family:'Courier New',monospace;font-size:11px;font-weight:900;letter-spacing:2px;border:1px dashed #ff4040;cursor:pointer;">⚠ DEV: FREE UPGRADES</button>
                 <div id="village-subtab-bar">
                     <button class="village-subtab-btn active" id="village-subtab-workers-btn">WORKERS</button>
                     <button class="village-subtab-btn" id="village-subtab-buildings-btn">BUILDINGS</button>
@@ -1361,6 +1449,7 @@ const game = {
     wood: 0, food: 0, stone: 0,
     phase: 'forest',
     population: 0,
+    popCap: 0,
     workers: { foresters: 0, farmers: 0, miners: 0 },
     workerAccum: { wood: 0, food: 0, stone: 0 },
     trees: [makeTree()],
@@ -1832,8 +1921,160 @@ function drawVillageHouse(ts) {
     ctx.strokeRect(winXR - 1, winY - 1, winSize + 2, winSize + 2);
 }
 
+function drawVillageCenter(ts) {
+    if (VILLAGE_BLDGS[1].level < 1) return;
+
+    const cx      = Math.round(W * 0.37);
+    const canopyW = Math.round(W * 0.27);
+    const postH   = Math.round(canopyW * 0.52);
+    const postW   = Math.max(4, Math.round(canopyW * 0.055));
+    const postX1  = cx - Math.round(canopyW / 2);
+    const postX2  = cx + Math.round(canopyW / 2) - postW;
+    const postTopY = GROUND - postH;
+
+    // Canopy roof (peaked, like a pavilion awning)
+    const overhang  = Math.round(canopyW * 0.09);
+    const roofPeakY = postTopY - Math.round(canopyW * 0.17);
+    const roofBaseY = postTopY + Math.round(postH * 0.1);
+
+    ctx.fillStyle = '#8B4020';
+    ctx.beginPath();
+    ctx.moveTo(postX1 - overhang, roofBaseY);
+    ctx.lineTo(cx, roofPeakY);
+    ctx.lineTo(postX2 + postW + overhang, roofBaseY);
+    ctx.closePath();
+    ctx.fill();
+
+    // Horizontal stripe layers across the roof
+    const layers = 3;
+    for (let l = 1; l <= layers; l++) {
+        const t   = l / (layers + 1);
+        const ly  = Math.round(roofPeakY + (roofBaseY - roofPeakY) * t);
+        const lxL = Math.round(cx + (postX1 - overhang - cx) * t);
+        const lxR = Math.round(cx + (postX2 + postW + overhang - cx) * t);
+        ctx.fillStyle = l % 2 === 0 ? '#6e2e0e' : '#a05020';
+        ctx.fillRect(lxL, ly, lxR - lxL, Math.max(2, Math.round(canopyW * 0.023)));
+    }
+    // Ridge cap
+    ctx.fillStyle = '#4a1e08';
+    ctx.fillRect(cx - 2, roofPeakY, 4, Math.round(canopyW * 0.07));
+
+    // Support posts
+    ctx.fillStyle = '#5a2e0e';
+    ctx.fillRect(postX1, postTopY, postW, postH);
+    ctx.fillRect(postX2, postTopY, postW, postH);
+    // Post caps
+    ctx.fillStyle = '#7a4216';
+    ctx.fillRect(postX1 - 1, postTopY, postW + 2, Math.max(2, Math.round(postW * 0.55)));
+    ctx.fillRect(postX2 - 1, postTopY, postW + 2, Math.max(2, Math.round(postW * 0.55)));
+
+    // Benches
+    const benchW = Math.round(canopyW * 0.22);
+    const benchH = Math.max(4, Math.round(canopyW * 0.042));
+    const legH   = Math.max(5, Math.round(canopyW * 0.078));
+    const legW   = Math.max(2, Math.round(canopyW * 0.038));
+    const benchY = GROUND - legH - benchH;
+
+    // Left bench
+    const lbX = postX1 + Math.round(postW * 0.5) - Math.round(benchW * 0.5);
+    ctx.fillStyle = '#7a5028';
+    ctx.fillRect(lbX, benchY, benchW, benchH);
+    // Plank grain line
+    ctx.fillStyle = '#6a4018';
+    ctx.fillRect(lbX, benchY + Math.round(benchH * 0.5), benchW, 1);
+    ctx.fillStyle = '#4e2e0e';
+    ctx.fillRect(lbX + Math.round(benchW * 0.1), benchY + benchH, legW, legH);
+    ctx.fillRect(lbX + benchW - Math.round(benchW * 0.1) - legW, benchY + benchH, legW, legH);
+
+    // Right bench
+    const rbX = postX2 + Math.round(postW * 0.5) - Math.round(benchW * 0.5);
+    ctx.fillStyle = '#7a5028';
+    ctx.fillRect(rbX, benchY, benchW, benchH);
+    ctx.fillStyle = '#6a4018';
+    ctx.fillRect(rbX, benchY + Math.round(benchH * 0.5), benchW, 1);
+    ctx.fillStyle = '#4e2e0e';
+    ctx.fillRect(rbX + Math.round(benchW * 0.1), benchY + benchH, legW, legH);
+    ctx.fillRect(rbX + benchW - Math.round(benchW * 0.1) - legW, benchY + benchH, legW, legH);
+
+    // Campfire
+    const fireR = Math.max(6, Math.round(canopyW * 0.068));
+    const fireX = cx;
+    const fireY = GROUND;
+
+    // Ground glow
+    const glow = ctx.createRadialGradient(fireX, fireY - fireR * 0.5, 0, fireX, fireY - fireR * 0.5, fireR * 3.5);
+    glow.addColorStop(0, 'rgba(255,110,15,0.28)');
+    glow.addColorStop(1, 'rgba(255,70,0,0)');
+    ctx.fillStyle = glow;
+    ctx.beginPath();
+    ctx.ellipse(fireX, fireY, fireR * 3.5, fireR * 1.1, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Ash/stone ring
+    ctx.fillStyle = '#2e1608';
+    ctx.beginPath();
+    ctx.ellipse(fireX, fireY - Math.round(fireR * 0.12), fireR * 1.05, fireR * 0.42, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Log pile (two crossed logs)
+    ctx.fillStyle = '#5a2608';
+    ctx.save();
+    ctx.translate(fireX, fireY - Math.round(fireR * 0.28));
+    ctx.rotate(Math.PI / 5.5);
+    ctx.fillRect(-fireR, -Math.round(fireR * 0.17), fireR * 2, Math.max(3, Math.round(fireR * 0.33)));
+    ctx.rotate(-Math.PI / 2.75);
+    ctx.fillRect(-fireR, -Math.round(fireR * 0.17), fireR * 2, Math.max(3, Math.round(fireR * 0.33)));
+    ctx.restore();
+
+    // Outer flame (orange)
+    const f1 = Math.sin(ts / 130);
+    const f2 = Math.sin(ts / 95 + 1.3);
+    ctx.globalAlpha = 0.82 + 0.18 * f1;
+    ctx.fillStyle = '#d85810';
+    ctx.beginPath();
+    ctx.moveTo(fireX - fireR, fireY);
+    ctx.quadraticCurveTo(fireX - fireR * 0.55, fireY - fireR * (1.9 + 0.35 * f1), fireX, fireY - fireR * (2.3 + 0.45 * f2));
+    ctx.quadraticCurveTo(fireX + fireR * 0.55, fireY - fireR * (1.9 + 0.35 * f1), fireX + fireR, fireY);
+    ctx.closePath();
+    ctx.fill();
+
+    // Mid flame (amber)
+    ctx.globalAlpha = 0.88 + 0.12 * f2;
+    ctx.fillStyle = '#f09018';
+    ctx.beginPath();
+    ctx.moveTo(fireX - fireR * 0.65, fireY - Math.round(fireR * 0.18));
+    ctx.quadraticCurveTo(fireX - fireR * 0.22, fireY - fireR * (1.55 + 0.28 * f2), fireX, fireY - fireR * (2.0 + 0.32 * f1));
+    ctx.quadraticCurveTo(fireX + fireR * 0.22, fireY - fireR * (1.55 + 0.28 * f2), fireX + fireR * 0.65, fireY - Math.round(fireR * 0.18));
+    ctx.closePath();
+    ctx.fill();
+
+    // Inner flame (bright yellow)
+    ctx.globalAlpha = 0.95;
+    ctx.fillStyle = '#ffd840';
+    ctx.beginPath();
+    ctx.moveTo(fireX - fireR * 0.33, fireY - Math.round(fireR * 0.38));
+    ctx.quadraticCurveTo(fireX, fireY - fireR * (1.35 + 0.22 * f1), fireX + fireR * 0.33, fireY - Math.round(fireR * 0.38));
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.globalAlpha = 1;
+
+    // Rising embers / sparks
+    for (let i = 0; i < 5; i++) {
+        const phase = ((ts / 850 + i * 0.2) % 1);
+        if (phase > 0.72) continue;
+        const sy = Math.round(fireY - fireR * 2.1 - phase * fireR * 4.5);
+        const sx = Math.round(fireX + Math.sin(phase * Math.PI * 3.5 + i * 1.7) * fireR * 0.85);
+        ctx.globalAlpha = ((0.72 - phase) / 0.72) * 0.85;
+        ctx.fillStyle = '#ff7820';
+        ctx.fillRect(sx, sy, 2, 2);
+    }
+    ctx.globalAlpha = 1;
+}
+
 function drawVillageScene(ts) {
     drawBackground(ts);
+    drawVillageCenter(ts);
     drawVillageHouse(ts);
     drawFloats();
 }
@@ -1971,8 +2212,19 @@ function buildVillagePanel() {
     }
 
     const idle = game.population - game.workers.foresters - game.workers.farmers - game.workers.miners;
+    const canRecruit = game.population < game.popCap;
     const idleEl = document.getElementById('village-idle-row');
-    if (idleEl) idleEl.textContent = `👥 ${idle} idle  /  ${game.population} total`;
+    if (idleEl) {
+        const recruitCost = Math.ceil(100 * Math.pow(1.5, game.population - 3));
+        const canAffordRecruit = devFree || (canRecruit && game.food >= recruitCost);
+        const recruitCls = canAffordRecruit ? 'can-afford' : 'cant-afford';
+        idleEl.innerHTML = `<span>👥 ${idle} idle / ${game.popCap}</span><button id="recruit-btn" class="${recruitCls}">+ RECRUIT (${formatNum(recruitCost)} 🌾)</button>`;
+        const recruitBtn = document.getElementById('recruit-btn');
+        if (recruitBtn && !recruitBtn._wired) {
+            recruitBtn.addEventListener('click', recruitVillager);
+            recruitBtn._wired = true;
+        }
+    }
 
     const defs = [
         { key: 'foresters', label: 'FORESTER', icon: '🌳', baseDesc: '+1 Wood/s',  rateLabel: 'Wood',  elId: 'village-worker-foresters' },
@@ -2036,10 +2288,17 @@ function spendBldg(b) {
 function buildBuildingCard(i) {
     const b     = VILLAGE_BLDGS[i];
     const atMax = b.level >= b.maxLevel;
-    const pct   = (b.level / b.maxLevel * 100).toFixed(1);
-    const lines = b.effectText().split('\n');
     const el    = document.getElementById(`vbld-${i}`);
     if (!el) return;
+
+    if (b.id === 'villagecenter' && atMax) {
+        el.style.display = 'none';
+        return;
+    }
+    el.style.display = '';
+
+    const pct   = (b.level / b.maxLevel * 100).toFixed(1);
+    const lines = b.effectText().split('\n');
 
     const costHtml = atMax ? '— MAXED —' : bldgCostHtml(b);
     const lvlBarHtml = `
@@ -2069,6 +2328,12 @@ function syncBuildingsPanel() {
             if (costEl) costEl.innerHTML = bldgCostHtml(b);
         }
     }
+    const recruitBtn = document.getElementById('recruit-btn');
+    if (recruitBtn) {
+        const recruitCost = Math.ceil(100 * Math.pow(1.5, game.population - 3));
+        const canAfford = devFree || (game.population < game.popCap && game.food >= recruitCost);
+        recruitBtn.className = canAfford ? 'can-afford' : 'cant-afford';
+    }
 }
 
 function buyBuilding(i) {
@@ -2077,9 +2342,29 @@ function buyBuilding(i) {
     if (!canAffordBldg(b)) return;
     spendBldg(b);
     b.level++;
-    if (b.id === 'house') game.population++;
+    if (b.id === 'house') game.popCap++;
+    if (b.id === 'villagecenter') document.getElementById('village-center-overlay').classList.remove('hidden');
     buildBuildingCard(i);
     syncBuildingsPanel();
+    buildVillagePanel();
+    updateHUD();
+    saveGame();
+}
+
+function recruitVillager() {
+    if (game.population >= game.popCap) {
+        spawnFloat(W / 2, displayH * 0.4, 'BUILD MORE HOUSES', '#c84040', 20, 1000);
+        return;
+    }
+    const cost = Math.ceil(100 * Math.pow(1.5, game.population - 3));
+    if (!devFree) {
+        if (game.food < cost) {
+            spawnFloat(W / 2, displayH * 0.4, `NEED ${formatNum(cost)} FOOD`, '#c84040', 20, 1000);
+            return;
+        }
+        game.food -= cost;
+    }
+    game.population++;
     buildVillagePanel();
     updateHUD();
     saveGame();
@@ -2289,6 +2574,7 @@ function completeVillage() {
     game.food = 0;
     game.stone = 0;
     game.population = 3;
+    game.popCap = 3;
     game.workers = { foresters: 0, farmers: 0, miners: 0 };
     game.workerAccum = { wood: 0, food: 0, stone: 0 };
 
@@ -3360,6 +3646,7 @@ function drawMineScene(ts) {
 // ═══════════════════════════════════════════════════════════════
 let lastTs = 0;
 let lastHudSync = 0;
+let lastVillageSave = 0;
 
 function chopTree(tree, cx) {
     const gained = getWoodMultiplier() * getLeafLitterMult() * getStoneMulchMult();
@@ -3591,7 +3878,8 @@ function loop(ts) {
     ctx.clearRect(0, 0, W, displayH);
     if (activeTab === 'village') {
         drawVillageScene(ts);
-        if (ts - lastHudSync >= 200) { updateHUD(); lastHudSync = ts; }
+        if (ts - lastHudSync >= 200) { updateHUD(); syncBuildingsPanel(); lastHudSync = ts; }
+        if (ts - lastVillageSave >= 1000) { saveGame(); lastVillageSave = ts; }
     } else if (activeTab === 'farm') {
         drawFarmScene(ts);
         if (ts - lastHudSync >= 200) { updateHUD(); syncPanel(); lastHudSync = ts; }
@@ -3759,6 +4047,7 @@ function saveGame() {
             stone: game.stone,
             phase: game.phase,
             population: game.population,
+            popCap: game.popCap,
             workers: { ...game.workers },
             firstChopDone: game.firstChopDone,
             upgrades: UPGRADES.map(u => u.level),
@@ -3860,6 +4149,7 @@ function loadGame() {
         if (data.phase === 'village') {
             game.phase = 'village';
             game.population = typeof data.population === 'number' ? data.population : 3;
+            game.popCap = typeof data.popCap === 'number' ? data.popCap : game.population;
             if (data.workers && typeof data.workers === 'object') {
                 game.workers.foresters = data.workers.foresters || 0;
                 game.workers.farmers   = data.workers.farmers   || 0;
@@ -3924,6 +4214,7 @@ function resetGameState() {
     game.stone         = 0;
     game.phase         = 'forest';
     game.population    = 0;
+    game.popCap        = 0;
     game.workers       = { foresters: 0, farmers: 0, miners: 0 };
     game.workerAccum   = { wood: 0, food: 0, stone: 0 };
     game.firstChopDone  = false;
@@ -3996,6 +4287,9 @@ function startGame() {
         switchTab('village');
         buildVillagePanel();
     });
+    document.getElementById('village-center-ok').addEventListener('click', () => {
+        document.getElementById('village-center-overlay').classList.add('hidden');
+    });
     if (game.phase === 'village') {
         switchTab('village');
         buildVillagePanel();
@@ -4032,8 +4326,11 @@ let pendingOfflineGains = null;
 
 function devMaxAll() {
     devFree = !devFree;
-    const btn = document.getElementById('dev-max-btn');
-    btn.textContent = devFree ? '⚠ DEV: FREE UPGRADES (ON)' : '⚠ DEV: FREE UPGRADES';
+    const label = devFree ? '⚠ DEV: FREE UPGRADES (ON)' : '⚠ DEV: FREE UPGRADES';
+    const b1 = document.getElementById('dev-max-btn');
+    if (b1) b1.textContent = label;
+    const b2 = document.getElementById('dev-free-village-btn');
+    if (b2) b2.textContent = label;
 }
 
 function showTitleScreen() {
