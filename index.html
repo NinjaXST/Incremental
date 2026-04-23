@@ -1098,8 +1098,8 @@ const UPGRADES = [
     {
         id: 'scythe', name: 'SHARP SCYTHE', maxLevel: 5, level: 0,
         currency: 'mixed',
-        get woodCost() { return Math.ceil(400 * Math.pow(1.30, this.level)); },
-        get foodCost() { return Math.ceil(50  * Math.pow(2, this.level)); },
+        get woodCost() { return Math.ceil(1000 * Math.pow(2, this.level)); },
+        get foodCost() { return Math.ceil(50   * Math.pow(3, this.level)); },
         cost() { return this.woodCost; },
         effectText() {
             const swipes = getSwipesNeeded();
@@ -1111,8 +1111,8 @@ const UPGRADES = [
     {
         id: 'fertilizer', name: 'FERTILIZER', maxLevel: 10, level: 0,
         currency: 'mixed',
-        get woodCost() { return Math.ceil(800 * Math.pow(1.05, this.level)); },
-        get foodCost() { return Math.ceil(100 * Math.pow(1.618, this.level)); },
+        get woodCost() { return Math.round(2000 * Math.pow(1.20, this.level) / 10) * 10; },
+        get foodCost() { return Math.round(100 * Math.pow(1.618, this.level) / 10) * 10; },
         cost() { return this.woodCost; },
         effectText() {
             const secs = (getWheatGrowTime() / 1000).toFixed(1);
@@ -1124,8 +1124,8 @@ const UPGRADES = [
     {
         id: 'croprot', name: 'CROP ROTATION', maxLevel: 10, level: 0,
         currency: 'mixed',
-        get woodCost() { return Math.ceil(4000 * Math.pow(1.17, this.level)); },
-        get foodCost() { return Math.ceil(500  * Math.pow(1.08, this.level)); },
+        get woodCost() { return Math.round(8000 * Math.pow(1.17, this.level) / 10) * 10; },
+        get foodCost() { return Math.round(500  * Math.pow(1.08, this.level) / 10) * 10; },
         cost() { return this.woodCost; },
         effectText() {
             const cur = Math.pow(1.5, this.level).toFixed(2);
@@ -1138,7 +1138,7 @@ const UPGRADES = [
     {
         id: 'newplot', name: 'NEW PLOT', maxLevel: 3, level: 0,
         currency: 'mixed',
-        get woodCost() { return Math.ceil(6000 * Math.pow(1.95, this.level)); },
+        get woodCost() { return Math.ceil(12000 * Math.pow(1.95, this.level)); },
         get foodCost() { return Math.ceil(800  * Math.pow(3, this.level)); },
         cost() { return this.woodCost; },
         effectText() {
@@ -1151,8 +1151,8 @@ const UPGRADES = [
     {
         id: 'pureline', name: 'PURE LINE SELECTION', maxLevel: 10, level: 0,
         currency: 'mixed',
-        get woodCost() { return Math.ceil(1200 * Math.pow(1.10, this.level)); },
-        get foodCost() { return Math.ceil(200 * Math.pow(1.7, this.level)); },
+        get woodCost() { return Math.ceil(2400 * Math.pow(1.70, this.level)); },
+        get foodCost() { return Math.round(200 * Math.pow(1.30, this.level) / 10) * 10; },
         cost() { return this.woodCost; },
         multiplier() { return Math.pow(1.5, this.level); },
         effectText() {
@@ -1166,8 +1166,8 @@ const UPGRADES = [
     {
         id: 'leaflitter', name: 'BIODIVERSITY', maxLevel: 10, level: 0,
         currency: 'mixed',
-        get woodCost() { return Math.ceil(1200 * Math.pow(1.10, this.level)); },
-        get foodCost() { return Math.ceil(200 * Math.pow(1.7, this.level)); },
+        get woodCost() { return Math.round(2400 * Math.pow(1.10, this.level) / 10) * 10; },
+        get foodCost() { return Math.round(200 * Math.pow(1.7, this.level) / 10) * 10; },
         cost() { return this.woodCost; },
         multiplier() { return Math.pow(1.5, this.level); },
         effectText() {
@@ -1182,11 +1182,11 @@ const UPGRADES = [
         id: 'windmill', name: 'WINDMILL', maxLevel: 5, level: 0,
         currency: 'stone-mixed',
         get woodCost() {
-            const fibs = [1, 1, 2, 3, 5];
-            return Math.ceil(100000 * fibs[this.level]);
+            const costs = [150000, 180000, 250000, 375000, 650000];
+            return costs[this.level] ?? 1000000;
         },
         get stoneCost() {
-            const costs = [3, 4, 7, 11, 18];  // gentler Fibonacci-like for stone
+            const costs = [2, 3, 5, 8, 13];  // gentler Fibonacci-like for stone
             return costs[this.level] ?? 999;
         },
         cost() { return this.woodCost; },
@@ -1224,7 +1224,7 @@ const UPGRADES = [
     {
         id: 'mine', name: 'MINING EXPEDITION', maxLevel: 1, level: 0,
         currency: 'mixed',
-        get woodCost() { return 50000; },
+        get woodCost() { return 100000; },
         get foodCost()  { return 10000; },
         cost() { return this.woodCost; },
         effectText() {
@@ -1298,18 +1298,18 @@ const UPGRADES = [
         currency: 'stone-mixed',
         get woodCost()  {
             const fibs = [1, 2, 3, 5, 8];
-            return Math.ceil(100000 * fibs[this.level]);
+            return Math.ceil(300000 * fibs[this.level]);
         },
         get stoneCost() {
-            const costs = [5, 9, 12, 16, 21];
-            return costs[this.level] ?? 21;
+            const costs = [2, 3, 5, 8, 12];
+            return costs[this.level] ?? 12;
         },
         cost() { return this.woodCost; },
-        multiplier() { return Math.pow(1.25, this.level); },
+        multiplier() { return Math.pow(1.50, this.level); },
         effectText() {
             const cur = this.multiplier().toFixed(2);
             if (this.level >= this.maxLevel) return `All food yield\n×${cur}`;
-            const nxt = Math.pow(1.25, this.level + 1).toFixed(2);
+            const nxt = Math.pow(1.50, this.level + 1).toFixed(2);
             return `All food yield\n×${cur} → ×${nxt}`;
         },
     },
@@ -1317,8 +1317,8 @@ const UPGRADES = [
     {
         id: 'miningbuddy', name: 'MINING BUDDY', maxLevel: 5, level: 0,
         currency: 'food-stone',
-        get foodCost()  { return Math.ceil(100000 * Math.pow(2, this.level)); },
-        get stoneCost() { const costs = [15, 30, 41, 56, 75]; return costs[this.level] ?? 75; },
+        get foodCost()  { return Math.ceil(100000 * Math.pow(1.5, this.level)); },
+        get stoneCost() { return Math.round(15 * Math.pow(1.3, this.level)); },
         cost() { return this.foodCost; },
         effectText() {
             if (this.level === 0) return `Auto-helps\nevery 3.0s`;
@@ -1345,22 +1345,22 @@ const UPGRADES = [
     },
     // 23 – Stone Mulching (mine upgrade, boosts wood yield)
     {
-        id: 'stonemulch', name: 'STONE MULCHING', maxLevel: 10, level: 0,
+        id: 'stonemulch', name: 'STONE MULCHING', maxLevel: 5, level: 0,
         currency: 'food-stone',
         get foodCost()  {
             const fibs = [1, 2, 3, 5, 8, 13, 21, 34, 55, 89];
             return Math.ceil(100000 * fibs[this.level]);
         },
         get stoneCost() {
-            const costs = [5, 9, 12, 16, 21, 29, 38, 52, 70, 94];
-            return costs[this.level] ?? 94;
+            const costs = [2, 3, 5, 8, 12];
+            return costs[this.level] ?? 12;
         },
         cost() { return this.foodCost; },
-        multiplier() { return Math.pow(1.25, this.level); },
+        multiplier() { return Math.pow(1.50, this.level); },
         effectText() {
             const cur = this.multiplier().toFixed(2);
             if (this.level >= this.maxLevel) return `Wood yield\n×${cur}`;
-            const nxt = Math.pow(1.25, this.level + 1).toFixed(2);
+            const nxt = Math.pow(1.50, this.level + 1).toFixed(2);
             return `Wood yield\n×${cur} → ×${nxt}`;
         },
     },
@@ -2578,12 +2578,7 @@ function completeVillage() {
     game.workers = { foresters: 0, farmers: 0, miners: 0 };
     game.workerAccum = { wood: 0, food: 0, stone: 0 };
 
-    document.getElementById('tab-wood-btn').style.display = 'none';
-    document.getElementById('tab-farm-btn').style.display = 'none';
-    document.getElementById('tab-mine-btn').style.display = 'none';
-    const villageBtn = document.getElementById('tab-village-btn');
-    villageBtn.style.display = '';
-    villageBtn.classList.add('new');
+    document.getElementById('tab-bar').style.display = 'none';
 
     document.getElementById('food-hud').classList.remove('hidden');
     document.getElementById('stone-hud').classList.remove('hidden');
@@ -4177,10 +4172,7 @@ function loadGame() {
 
         // Restore UI state
         if (game.phase === 'village') {
-            document.getElementById('tab-wood-btn').style.display = 'none';
-            document.getElementById('tab-farm-btn').style.display = 'none';
-            document.getElementById('tab-mine-btn').style.display = 'none';
-            document.getElementById('tab-village-btn').style.display = '';
+            document.getElementById('tab-bar').style.display = 'none';
             document.getElementById('food-hud').classList.remove('hidden');
             document.getElementById('stone-hud').classList.remove('hidden');
         } else {
